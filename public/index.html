@@ -249,9 +249,25 @@
           </label>
         </div>
         <div class="modal-buttons">
-          <button type="button" class="btn btn-primary" @click="saveItem('add')">Ajouter</button>
-          <button type="button" class="btn btn-success" @click="saveItem('create')">Ajouter & crée</button>
-          <button type="button" class="btn btn-info" @click="saveItem('clone')">Ajouter & cloner</button>
+          <div class="dropdown-container" :class="{ open: showActionDropdown }" role="group" @keyup.esc="showActionDropdown = false">
+            <button type="button" class="btn btn-primary dropdown-btn" @click="selectItemAction(lastItemAction)" :aria-label="'Exécuter action: ' + lastItemAction">
+              {{ lastItemAction === 'add' ? 'Ajouter' : lastItemAction === 'create' ? 'Ajouter & créer' : 'Ajouter & cloner' }}
+            </button>
+            <button type="button" class="dropdown-toggle" @click="toggleActionDropdown" aria-haspopup="true" :aria-expanded="showActionDropdown.toString()" aria-label="Choisir autre mode">
+              <span class="dropdown-arrow">{{ showActionDropdown ? '▲' : '▼' }}</span>
+            </button>
+            <div class="dropdown-menu" v-show="showActionDropdown" role="menu">
+              <button type="button" role="menuitemradio" class="dropdown-item" @click="selectLastItemAction('add')" :class="{ active: lastItemAction === 'add' }" :aria-checked="(lastItemAction === 'add').toString()">
+                Ajouter
+              </button>
+              <button type="button" role="menuitemradio" class="dropdown-item" @click="selectLastItemAction('create')" :class="{ active: lastItemAction === 'create' }" :aria-checked="(lastItemAction === 'create').toString()">
+                Ajouter & créer
+              </button>
+              <button type="button" role="menuitemradio" class="dropdown-item" @click="selectLastItemAction('clone')" :class="{ active: lastItemAction === 'clone' }" :aria-checked="(lastItemAction === 'clone').toString()">
+                Ajouter & cloner
+              </button>
+            </div>
+          </div>
           <button type="button" class="btn back-btn" @click="closeItemForm">Annuler</button>
         </div>
       </div>
@@ -307,7 +323,5 @@
   
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="app.js"></script>
-</body>
-</html>
 </body>
 </html>

@@ -45,7 +45,9 @@ createApp({
       dragStartScroll: 0,
       currentDraggingCarousel: null,
       dragListenersAdded: false,
-      dragStarted: false
+      dragStarted: false,
+      lastItemAction: 'add',
+      showActionDropdown: false
     };
   },
   watch: {
@@ -365,6 +367,9 @@ createApp({
               link: '', 
               owned: false 
             };
+          } else if (action === 'clone') {
+            // Keep the form open with current data for cloning
+            this.editingItem = null;
           }
         } else {
           this.showNotification('Erreur lors de la sauvegarde', 'error');
@@ -374,9 +379,14 @@ createApp({
         this.showNotification('Erreur lors de la sauvegarde', 'error');
       }
     },
+    selectItemAction(action) {
+      this.lastItemAction = action;
+      this.saveItem(action);
+    },
     closeItemForm() {
       this.showItemForm = false;
       this.editingItem = null;
+      this.showActionDropdown = false;
       this.itemForm = { 
         name: '', 
         description: '', 
@@ -493,9 +503,17 @@ createApp({
       setTimeout(() => {
         this.notifications = this.notifications.filter(n => n.id !== id);
       }, 3000);
+    },
+    toggleActionDropdown() {
+      this.showActionDropdown = !this.showActionDropdown;
+    },
+    selectLastItemAction(action) {
+      this.lastItemAction = action;
+      this.showActionDropdown = false;
     }
   },
   mounted() {
+    // Restore session if token exists
     const token = localStorage.getItem('token');
     if (token) {
       this.token = token;
@@ -509,5 +527,11 @@ createApp({
         });
       });
     }
+    // Global click listener to close dropdown
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.dropdown-container')) {
+        this.showActionDropdown = false;
+      }
+    });
   }
 }).mount('#app');
