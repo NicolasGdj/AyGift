@@ -5,3 +5,4 @@ database.sqlite-journal
 *.log
 .env
 public/images/uploads/
+.2fa-secret.json

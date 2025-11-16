@@ -16,9 +16,12 @@ export const authMethods = {
         localStorage.setItem('token', data.token);
         this.showWelcome = false;
         this.loadInitialData();
+      } else {
+        alert(data.error || 'Login failed');
       }
     } catch (error) {
       console.error('Login error:', error);
+      alert('Login error');
     }
   },
   setGuestName() {
