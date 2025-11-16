@@ -123,11 +123,9 @@
         <div v-if="wishlistItems.length > 0" class="carousel-section">
           <h2 class="carousel-title">Ce que j'aimerais</h2>
           <div class="carousel-container">
-            <div class="carousel" 
-                 @touchstart="onTouchStart($event)" 
-                 @touchend="onTouchEnd('wishlist', $event)">
+            <div class="carousel">
               <div 
-                v-for="(item, index) in wishlistItems.slice(wishlistIndex, wishlistIndex + 5)" 
+                v-for="(item, index) in wishlistItems" 
                 :key="item.id"
                 class="item-card"
                 :class="{ active: item === currentWishlistItem }"
@@ -158,8 +156,8 @@
                 </div>
               </div>
             </div>
-            <button type="button" v-if="wishlistItems.length > 1" class="nav-arrow left" @click="prevWishlist" aria-label="Précédent">‹</button>
-            <button type="button" v-if="wishlistItems.length > 1" class="nav-arrow right" @click="nextWishlist" aria-label="Suivant">›</button>
+            <button type="button" v-if="wishlistItems.length > 5" class="nav-arrow left" @click="scrollWishlist(-1)" aria-label="Précédent">‹</button>
+            <button type="button" v-if="wishlistItems.length > 5" class="nav-arrow right" @click="scrollWishlist(1)" aria-label="Suivant">›</button>
           </div>
         </div>
         
@@ -167,11 +165,9 @@
         <div v-if="ownedItems.length > 0" class="carousel-section">
           <h2 class="carousel-title">Ce que j'ai déjà</h2>
           <div class="carousel-container">
-            <div class="carousel"
-                 @touchstart="onTouchStart($event)" 
-                 @touchend="onTouchEnd('owned', $event)">
+            <div class="carousel">
               <div 
-                v-for="(item, index) in ownedItems.slice(ownedIndex, ownedIndex + 5)" 
+                v-for="(item, index) in ownedItems" 
                 :key="item.id"
                 class="item-card owned"
                 :class="{ active: item === currentOwnedItem }"
@@ -190,8 +186,8 @@
                 </div>
               </div>
             </div>
-            <button type="button" v-if="ownedItems.length > 1" class="nav-arrow left" @click="prevOwned" aria-label="Précédent">‹</button>
-            <button type="button" v-if="ownedItems.length > 1" class="nav-arrow right" @click="nextOwned" aria-label="Suivant">›</button>
+            <button type="button" v-if="ownedItems.length > 5" class="nav-arrow left" @click="scrollOwned(-1)" aria-label="Précédent">‹</button>
+            <button type="button" v-if="ownedItems.length > 5" class="nav-arrow right" @click="scrollOwned(1)" aria-label="Suivant">›</button>
           </div>
         </div>
       </div>

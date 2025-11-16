@@ -34,15 +34,18 @@ createApp({
         owned: false 
       },
       showPriceFilter: false,
-      wishlistIndex: 0,
-      ownedIndex: 0,
-      touchStartX: null,
       itemsOffset: 0,
       itemsLimit: 20,
       loadingMore: false,
       hasMore: true,
       debounceTimeout: null,
-      notifications: []
+      notifications: [],
+      isDragging: false,
+      dragStartX: 0,
+      dragStartScroll: 0,
+      currentDraggingCarousel: null,
+      dragListenersAdded: false,
+      dragStarted: false
     };
   },
   watch: {
@@ -88,10 +91,10 @@ createApp({
         });
     },
     currentWishlistItem() {
-      return this.wishlistItems[this.wishlistIndex] || null;
+      return this.wishlistItems[0] || null;
     },
     currentOwnedItem() {
-      return this.ownedItems[this.ownedIndex] || null;
+      return this.ownedItems[0] || null;
     }
   },
   methods: {
@@ -125,7 +128,12 @@ createApp({
       if (this.guestName.trim()) {
         this.userName = this.guestName;
         this.showWelcome = false;
-        this.loadInitialData();
+        this.loadInitialData().then(() => {
+          this.$nextTick(() => {
+            const carousels = document.querySelectorAll('.carousel-section .carousel');
+            carousels.forEach(carousel => this.initDrag(carousel));
+          });
+        });
       }
     },
     async loadInitialData(showLoading = true) {
@@ -138,8 +146,6 @@ createApp({
         this.categories = await catRes.json();
         this.bookings = await bookingsRes.json();
         await this.loadItems(true);
-        this.wishlistIndex = 0;
-        this.ownedIndex = 0;
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -171,6 +177,10 @@ createApp({
         if (newItems.length < this.itemsLimit) {
           this.hasMore = false;
         }
+        this.$nextTick(() => {
+          const carousels = document.querySelectorAll('.carousel-section .carousel');
+          carousels.forEach(carousel => this.initDrag(carousel));
+        });
       } catch (error) {
         console.error('Error loading items:', error);
       } finally {
@@ -182,8 +192,6 @@ createApp({
       this.searchQuery = '';
       this.priceMin = null;
       this.priceMax = null;
-      this.wishlistIndex = 0;
-      this.ownedIndex = 0;
       this.loadItems(true);
     },
     handleCategoryClick(category) {
@@ -410,46 +418,74 @@ createApp({
     togglePriceFilter() {
       this.showPriceFilter = !this.showPriceFilter;
     },
-    nextWishlist() {
-      if (this.wishlistItems.length === 0) return;
-      this.wishlistIndex = (this.wishlistIndex + 1) % this.wishlistItems.length;
-      if (this.wishlistIndex >= this.wishlistItems.length - 5) {
-        this.loadItems();
+    scrollWishlist(direction) {
+      const carousel = document.querySelector('.carousel-section:nth-child(1) .carousel');
+      if (carousel) {
+        const firstItem = carousel.querySelector('.item-card');
+        if (firstItem) {
+          const itemWidth = firstItem.offsetWidth + 24; // width + gap
+          const currentScroll = carousel.scrollLeft;
+          const targetIndex = Math.round(currentScroll / itemWidth) + direction;
+          const targetScroll = targetIndex * itemWidth;
+          carousel.scrollTo({ left: targetScroll, behavior: 'smooth' });
+        }
       }
     },
-    prevWishlist() {
-      if (this.wishlistItems.length === 0) return;
-      this.wishlistIndex = (this.wishlistIndex - 1 + this.wishlistItems.length) % this.wishlistItems.length;
-    },
-    nextOwned() {
-      if (this.ownedItems.length === 0) return;
-      this.ownedIndex = (this.ownedIndex + 1) % this.ownedItems.length;
-      if (this.ownedIndex >= this.ownedItems.length - 5) {
-        this.loadItems();
+    scrollOwned(direction) {
+      const carousel = document.querySelector('.carousel-section:nth-child(2) .carousel');
+      if (carousel) {
+        const firstItem = carousel.querySelector('.item-card');
+        if (firstItem) {
+          const itemWidth = firstItem.offsetWidth + 24; // width + gap
+          const currentScroll = carousel.scrollLeft;
+          const targetIndex = Math.round(currentScroll / itemWidth) + direction;
+          const targetScroll = targetIndex * itemWidth;
+          carousel.scrollTo({ left: targetScroll, behavior: 'smooth' });
+        }
       }
     },
-    prevOwned() {
-      if (this.ownedItems.length === 0) return;
-      this.ownedIndex = (this.ownedIndex - 1 + this.ownedItems.length) % this.ownedItems.length;
-    },
-    onTouchStart(e) {
-      this.touchStartX = e.changedTouches[0].clientX;
-    },
-    onTouchEnd(type, e) {
-      if (this.touchStartX === null) return;
-      const endX = e.changedTouches[0].clientX;
-      const diff = endX - this.touchStartX;
-      const threshold = 40;
-      if (Math.abs(diff) < threshold) {
-        this.touchStartX = null;
-        return;
+    initDrag(carousel) {
+      carousel.addEventListener('mousedown', (e) => {
+        this.isDragging = true;
+        this.currentDraggingCarousel = carousel;
+        this.dragStartX = e.clientX;
+        this.dragStartScroll = carousel.scrollLeft;
+        this.dragStarted = false;
+        carousel.style.scrollBehavior = 'auto';
+        carousel.style.scrollSnapType = 'none';
+        e.preventDefault();
+      });
+
+      // Add global listeners only once
+      if (!this.dragListenersAdded) {
+        document.addEventListener('mousemove', (e) => {
+          if (this.isDragging && this.currentDraggingCarousel) {
+            const delta = e.clientX - this.dragStartX;
+            if (!this.dragStarted && Math.abs(delta) > 5) {
+              this.dragStarted = true;
+              this.currentDraggingCarousel.classList.add('dragging');
+            }
+            if (this.dragStarted) {
+              this.currentDraggingCarousel.scrollLeft = this.dragStartScroll - delta;
+            }
+          }
+        });
+
+        document.addEventListener('mouseup', () => {
+          if (this.isDragging && this.currentDraggingCarousel) {
+            this.isDragging = false;
+            this.currentDraggingCarousel.style.scrollBehavior = 'smooth';
+            this.currentDraggingCarousel.style.scrollSnapType = 'x mandatory';
+            if (this.dragStarted) {
+              this.currentDraggingCarousel.classList.remove('dragging');
+            }
+            this.currentDraggingCarousel = null;
+            this.dragStarted = false;
+          }
+        });
+
+        this.dragListenersAdded = true;
       }
-      if (diff < 0) {
-        if (type === 'wishlist') this.nextWishlist(); else this.nextOwned();
-      } else {
-        if (type === 'wishlist') this.prevWishlist(); else this.prevOwned();
-      }
-      this.touchStartX = null;
     },
     showNotification(message, type = 'success') {
       const id = Date.now();
@@ -466,7 +502,12 @@ createApp({
       this.isAdmin = true;
       this.userName = 'Nicolas';
       this.showWelcome = false;
-      this.loadInitialData();
+      this.loadInitialData().then(() => {
+        this.$nextTick(() => {
+          const carousels = document.querySelectorAll('.carousel-section .carousel');
+          carousels.forEach(carousel => this.initDrag(carousel));
+        });
+      });
     }
   }
 }).mount('#app');

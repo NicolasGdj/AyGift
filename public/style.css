@@ -500,19 +500,44 @@ body {
 /* Carousel */
 .carousel-container {
   position: relative;
-  overflow: hidden;
+  padding: 0 60px;
 }
 
 .carousel {
   display: flex;
   gap: 1.5rem;
-  overflow-x: hidden;
+  overflow-x: auto;
   scroll-behavior: smooth;
   padding: 1rem 0 2rem;
   scrollbar-width: none;
+  scroll-snap-type: x mandatory;
 }
 
-.carousel::-webkit-scrollbar { display: none; }
+.carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.carousel::-webkit-scrollbar {
+  height: 6px;
+}
+
+.carousel::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.1);
+  border-radius: 3px;
+}
+
+.carousel::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.3);
+  border-radius: 3px;
+}
+
+.carousel::-webkit-scrollbar-thumb:hover {
+  background: rgba(0,0,0,0.5);
+}
+
+.carousel.dragging .item-card {
+  pointer-events: none;
+}
 
 .nav-arrow {
   position: absolute;
@@ -533,41 +558,44 @@ body {
   box-shadow: 0 4px 16px rgba(0,0,0,0.2);
   transition: transform 0.25s, box-shadow 0.25s;
   color: #1e293b;
-  z-index: 10;
+  z-index: 1000;
+  pointer-events: auto;
 }
-.nav-arrow.left {
-  left: 10px;
 }
-.nav-arrow.right {
-  right: 10px;
 }
+
 .nav-arrow:hover {
   transform: translateY(-50%) scale(1.1);
   box-shadow: 0 6px 20px rgba(0,0,0,0.3);
 }
+.nav-arrow.left {
+  left: 0;
+}
+.nav-arrow.right {
+  right: 0;
+}
 
-/* Desktop: hide arrows, show multiple items */
+/* Show arrows when there are more than 5 items */
 @media (min-width: 769px) {
   .nav-arrow {
-    display: none;
+    display: flex;
   }
 }
 
-/* Mobile: hide non-active items, show arrows */
+/* Mobile: show arrows when there are more than 5 items */
 @media (max-width: 768px) {
-  .item-card:not(.active) {
-    display: none;
-  }
   .nav-arrow {
     display: flex;
   }
   .carousel {
-    overflow-x: hidden;
-    justify-content: center;
+    overflow-x: auto;
+    justify-content: flex-start;
+    padding: 1rem;
+    scroll-padding: 0 50%;
   }
   .item-card {
-    flex: 0 1 280px;
-    max-width: 100%;
+    flex: 0 0 calc(100vw - 2rem);
+    max-width: calc(100vw - 2rem);
   }
 }
 
@@ -584,8 +612,8 @@ body {
   backdrop-filter: blur(10px);
   border-radius: 20px;
   padding: 0;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  scroll-snap-align: start;
   position: relative;
   overflow: hidden;
   display: flex;
@@ -850,6 +878,10 @@ body {
 }
 
 @media (max-width: 768px) {
+  /* Carousel */
+.carousel-container {
+  padding: 0 0;
+}
   .price-inputs {
     flex-direction: column;
   }
