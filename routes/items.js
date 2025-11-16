@@ -1,6 +1,54 @@
 import express from 'express';
 import { Op } from 'sequelize';
-import { Item, Category } from '../dao/index.js';
+import { Item, Category, ItemBook } from '../dao/index.js';
+import { fileURLToPath } from 'url';
+import path from 'path';
+import { promises as fs } from 'fs';
+import { randomUUID } from 'crypto';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const IMAGES_DIR = path.join(__dirname, '..', 'public', 'images', 'uploads');
+
+async function ensureImagesDir() {
+  try { await fs.mkdir(IMAGES_DIR, { recursive: true }); } catch (_) {}
+}
+
+async function downloadImage(imageUrl) {
+  if (!imageUrl || !/^https?:\/\//i.test(imageUrl)) return null;
+  try {
+    await ensureImagesDir();
+    const res = await fetch(imageUrl);
+    if (!res.ok) return null;
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.startsWith('image/')) return null;
+    const arrayBuf = await res.arrayBuffer();
+    let extGuess = contentType.split('/')[1] || 'jpg';
+    // Try to get extension from URL if present
+    try {
+      const urlObj = new URL(imageUrl);
+      const pathname = urlObj.pathname;
+      const match = pathname.match(/\.([a-zA-Z0-9]+)$/);
+      if (match) extGuess = match[1];
+    } catch (_) {}
+    const fileName = `${randomUUID()}.${extGuess}`;
+    const filePath = path.join(IMAGES_DIR, fileName);
+    await fs.writeFile(filePath, Buffer.from(arrayBuf));
+    return `/images/uploads/${fileName}`;
+  } catch (e) {
+    console.error('Image download failed:', e.message);
+    return null;
+  }
+}
+
+async function deleteLocalImage(imagePath) {
+  try {
+    if (!imagePath || typeof imagePath !== 'string') return;
+    if (!imagePath.startsWith('/images/uploads/')) return; // only local stored
+    const filePath = path.join(IMAGES_DIR, path.basename(imagePath));
+    await fs.unlink(filePath).catch(() => {});
+  } catch (_) {}
+}
 
 const router = express.Router();
 
@@ -60,7 +108,12 @@ router.get('/:id', async (req, res) => {
 // POST new item
 router.post('/', async (req, res) => {
   try {
-    const item = await Item.create(req.body);
+    const body = { ...req.body };
+    if (body.image) {
+      const localPath = await downloadImage(body.image);
+      if (localPath) body.image = localPath; // replace with local path
+    }
+    const item = await Item.create(body);
     res.status(201).json(item);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -75,7 +128,6 @@ router.post('/bulk', async (req, res) => {
     const created = [];
     const errors = [];
 
-    // Preload categories by name to reduce queries
     const allCategories = await Category.findAll();
     const categoryByName = new Map(allCategories.map(c => [c.name.toLowerCase(), c]));
 
@@ -99,13 +151,18 @@ router.post('/bulk', async (req, res) => {
           }
         }
 
+        let imagePath = null;
+        if (raw.image) {
+          imagePath = await downloadImage(raw.image);
+        }
+
         const toCreate = {
           category_id: categoryId,
           name: raw.name,
-            description: raw.description || null,
+          description: raw.description || null,
           price: raw.price || null,
           link: raw.link || null,
-          image: raw.image || null,
+          image: imagePath || null,
           owned: !!raw.owned,
           last_interest_date: raw.last_interest_date || new Date().toISOString()
         };
@@ -144,6 +201,9 @@ router.delete('/:id', async (req, res) => {
     if (!item) {
       return res.status(404).json({ error: 'Item not found' });
     }
+    // Delete bookings referencing this item first to satisfy FK constraints
+    await ItemBook.destroy({ where: { item_id: item.id } });
+    await deleteLocalImage(item.image);
     await item.destroy();
     res.status(204).send();
   } catch (error) {

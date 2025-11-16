@@ -4,3 +4,4 @@ database.sqlite
 database.sqlite-journal
 *.log
 .env
+public/images/uploads/

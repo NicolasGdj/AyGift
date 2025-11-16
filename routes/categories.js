@@ -1,5 +1,21 @@
 import express from 'express';
-import { Category, Item } from '../dao/index.js';
+import { Category, Item, ItemBook } from '../dao/index.js';
+import { fileURLToPath } from 'url';
+import path from 'path';
+import { promises as fs } from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const IMAGES_DIR = path.join(__dirname, '..', 'public', 'images', 'uploads');
+
+async function deleteLocalImage(imagePath) {
+  try {
+    if (!imagePath || typeof imagePath !== 'string') return;
+    if (!imagePath.startsWith('/images/uploads/')) return;
+    const filePath = path.join(IMAGES_DIR, path.basename(imagePath));
+    await fs.unlink(filePath).catch(() => {});
+  } catch (_) {}
+}
 
 const router = express.Router();
 
@@ -57,8 +73,15 @@ router.delete('/:id', async (req, res) => {
     if (!category) {
       return res.status(404).json({ error: 'Category not found' });
     }
-    // Delete items belonging to the category first
-    await Item.destroy({ where: { category_id: category.id } });
+    // Fetch items to remove associated local images
+    const items = await Item.findAll({ where: { category_id: category.id } });
+    const itemIds = items.map(i => i.id);
+    if (itemIds.length) {
+      // Remove bookings in a single query
+      await ItemBook.destroy({ where: { item_id: itemIds } });
+      for (const item of items) { await deleteLocalImage(item.image); }
+      await Item.destroy({ where: { category_id: category.id } });
+    }
     await category.destroy();
     res.status(204).send();
   } catch (error) {
