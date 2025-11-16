@@ -1,0 +1,98 @@
+import { authMethods } from './methods/auth.js';
+import { dataMethods } from './methods/data.js';
+import { itemMethods } from './methods/items.js';
+import { uiMethods } from './methods/ui.js';
+import { bulkMethods } from './methods/bulk.js';
+
+const partials = ['welcome.html','main.html','modals.html','bulk.html','notifications.html'];
+
+async function loadPartials() {
+  const appEl = document.getElementById('app');
+  for (const file of partials) {
+    const res = await fetch(`composants/${file}`);
+    const html = await res.text();
+    appEl.insertAdjacentHTML('beforeend', html);
+  }
+}
+
+await loadPartials();
+
+const { createApp } = Vue;
+
+const methods = { ...authMethods, ...dataMethods, ...itemMethods, ...uiMethods, ...bulkMethods };
+
+createApp({
+  data() {
+    return {
+      showWelcome: true,
+      welcomeStep: 'choice',
+      password: '',
+      guestName: '',
+      userName: '',
+      isAdmin: false,
+      token: null,
+      categories: [],
+      items: [],
+      bookings: [],
+      selectedCategory: null,
+      selectedItem: null,
+      searchQuery: '',
+      priceMin: null,
+      priceMax: null,
+      loading: false,
+      showCategoryForm: false,
+      showItemForm: false,
+      editingCategory: null,
+      editingItem: null,
+      categoryForm: { name: '', description: '' },
+      itemForm: { name: '', description: '', image: '', category_id: null, price: '', link: '', owned: false },
+      showPriceFilter: false,
+      itemsOffset: 0,
+      itemsLimit: 20,
+      loadingMore: false,
+      hasMore: true,
+      debounceTimeout: null,
+      notifications: [],
+      isDragging: false,
+      dragStartX: 0,
+      dragStartScroll: 0,
+      currentDraggingCarousel: null,
+      dragListenersAdded: false,
+      dragStarted: false,
+      lastItemAction: 'add',
+      showActionDropdown: false,
+      showBulkImport: false,
+      bulkJson: '',
+      bulkImportResult: null
+    };
+  },
+  watch: {
+    searchQuery() { clearTimeout(this.debounceTimeout); this.debounceTimeout = setTimeout(() => { this.loadItems(true); }, 500); },
+    priceMin() { clearTimeout(this.debounceTimeout); this.debounceTimeout = setTimeout(() => { this.loadItems(true); }, 500); },
+    priceMax() { clearTimeout(this.debounceTimeout); this.debounceTimeout = setTimeout(() => { this.loadItems(true); }, 500); }
+  },
+  computed: {
+    filteredItems() { return this.items; },
+    wishlistItems() { return this.filteredItems.filter(i => !i.owned).sort((a,b) => { const da = a.last_interest_date ? new Date(a.last_interest_date) : new Date(0); const db = b.last_interest_date ? new Date(b.last_interest_date) : new Date(0); return db - da; }); },
+    ownedItems() { return this.filteredItems.filter(i => i.owned).sort((a,b) => { const da = a.last_interest_date ? new Date(a.last_interest_date) : new Date(0); const db = b.last_interest_date ? new Date(b.last_interest_date) : new Date(0); return db - da; }); },
+    currentWishlistItem() { return this.wishlistItems[0] || null; },
+    currentOwnedItem() { return this.ownedItems[0] || null; }
+  },
+  methods,
+  mounted() {
+    const token = localStorage.getItem('token');
+    if (token) {
+      this.token = token;
+      this.isAdmin = true;
+      this.userName = 'Nicolas';
+      this.showWelcome = false;
+      this.loadInitialData().then(() => {
+        this.$nextTick(() => {
+          const carousels = document.querySelectorAll('.carousel-section .carousel');
+          carousels.forEach(c => this.initDrag(c));
+        });
+      });
+    }
+    document.addEventListener('click', (e) => { if (!e.target.closest('.dropdown-container')) { this.showActionDropdown = false; } });
+  }
+}).mount('#app');

@@ -1,0 +1,87 @@
+<div v-else class="container">
+  <div class="header">
+    <h1>AyGift</h1>
+    <p v-if="isAdmin">
+      Mode Admin
+      <button type="button" class="logout-btn" @click="logout">Déconnexion</button>
+    </p>
+    <p v-else>Bonjour {{ userName }} !</p>
+  </div>
+  <div class="search-container">
+    <span class="search-icon">🔍</span>
+    <input type="text" class="search-input" v-model="searchQuery" placeholder="Rechercher un article ou une catégorie..." />
+  </div>
+  <button type="button" class="filter-toggle-btn" @click="togglePriceFilter">
+    <span>Filtrer par prix</span>
+    <span>{{ showPriceFilter ? '▲' : '▼' }}</span>
+  </button>
+  <div class="price-filter" :class="{ collapsed: !showPriceFilter }">
+    <h4>Filtrer par prix</h4>
+    <div class="price-inputs">
+      <input type="number" v-model.number="priceMin" placeholder="Min (€)" min="0" />
+      <span>-</span>
+      <input type="number" v-model.number="priceMax" placeholder="Max (€)" min="0" />
+    </div>
+  </div>
+  <div v-if="isAdmin" class="admin-toolbar">
+    <button type="button" class="btn btn-success btn-small" @click="showCategoryForm = true">+ Nouvelle Catégorie</button>
+    <button type="button" class="btn btn-primary btn-small" @click="addNewItem">+ Nouvel Article</button>
+    <button type="button" class="btn btn-info btn-small" @click="openBulkImport">+ Bulk</button>
+    <button type="button" class="btn btn-danger btn-small" @click="resetAllBookings">Réinitialiser Intérêts</button>
+  </div>
+  <div class="category-menu">
+    <button type="button" class="category-btn" :class="{ active: selectedCategory === null }" @click="selectCategory(null)">Toutes</button>
+    <button type="button" v-for="cat in categories" :key="cat.id" class="category-btn" :class="{ active: selectedCategory === cat.id }" @click="handleCategoryClick(cat)">{{ cat.name }}</button>
+  </div>
+  <div v-if="loading" class="loading">Chargement...</div>
+  <div v-else>
+    <div v-if="wishlistItems.length > 0" class="carousel-section">
+      <h2 class="carousel-title">Ce que j'aimerais</h2>
+      <div class="carousel-container">
+        <div class="carousel">
+          <div v-for="(item, index) in wishlistItems" :key="item.id" class="item-card" :class="{ active: item === currentWishlistItem }" @click="showItemDetail(item)">
+            <div class="item-card-top">
+              <img v-if="item.image" :src="item.image" :alt="item.name" class="item-image" />
+              <div class="item-content">
+                <div class="item-header">
+                  <h3>{{ item.name }}</h3>
+                  <div class="item-price-badge" v-if="item.price">{{ item.price }}€</div>
+                </div>
+                <div class="item-date" v-if="item.last_interest_date">Nicolas a renouvelé son intérêt le {{ formatDate(item.last_interest_date) }}</div>
+              </div>
+            </div>
+            <div class="item-card-bottom" v-if="!isAdmin">
+              <button type="button" tabindex="-1" class="interest-button" :class="{ interested: isUserInterested(item) }" @click.prevent.stop="toggleInterest(item)" @touchstart.stop @touchend.stop>
+                {{ isUserInterested(item) ? '✓ Intéressé' : 'Ça m\'intéresse' }}
+                <span class="interest-count">({{ getInterestCount(item) }})</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <button type="button" v-if="wishlistItems.length > 5" class="nav-arrow left" @click="scrollWishlist(-1)" aria-label="Précédent">‹</button>
+        <button type="button" v-if="wishlistItems.length > 5" class="nav-arrow right" @click="scrollWishlist(1)" aria-label="Suivant">›</button>
+      </div>
+    </div>
+    <div v-if="ownedItems.length > 0" class="carousel-section">
+      <h2 class="carousel-title">Ce que j'ai déjà</h2>
+      <div class="carousel-container">
+        <div class="carousel">
+          <div v-for="(item, index) in ownedItems" :key="item.id" class="item-card owned" :class="{ active: item === currentOwnedItem }" @click="showItemDetail(item)">
+            <div class="item-card-top">
+              <img v-if="item.image" :src="item.image" :alt="item.name" class="item-image" />
+              <div class="item-content">
+                <div class="item-header">
+                  <h3>{{ item.name }}</h3>
+                  <div class="item-price-badge" v-if="item.price">{{ item.price }}€</div>
+                </div>
+                <div class="item-date" v-if="item.last_interest_date">Nicolas a renouvelé son intérêt le {{ formatDate(item.last_interest_date) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button type="button" v-if="ownedItems.length > 5" class="nav-arrow left" @click="scrollOwned(-1)" aria-label="Précédent">‹</button>
+        <button type="button" v-if="ownedItems.length > 5" class="nav-arrow right" @click="scrollOwned(1)" aria-label="Suivant">›</button>
+      </div>
+    </div>
+  </div>
+</div>

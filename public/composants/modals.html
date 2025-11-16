@@ -1,0 +1,91 @@
+<div v-if="showCategoryForm" class="modal-overlay" @click.self="showCategoryForm = false">
+  <div class="modal">
+    <h2>{{ editingCategory ? 'Modifier' : 'Nouvelle' }} Catégorie</h2>
+    <div class="input-group">
+      <label>Nom</label>
+      <input type="text" v-model="categoryForm.name" placeholder="Ex: Électronique">
+    </div>
+    <div class="input-group">
+      <label>Description</label>
+      <textarea v-model="categoryForm.description" placeholder="Description de la catégorie"></textarea>
+    </div>
+    <div class="modal-buttons">
+      <button type="button" class="btn btn-primary" @click="saveCategory">Enregistrer</button>
+      <button type="button" class="btn back-btn" @click="closeCategoryForm">Annuler</button>
+    </div>
+  </div>
+</div>
+<div v-if="showItemForm" class="modal-overlay" @click.self="showItemForm = false">
+  <div class="modal">
+    <h2>{{ editingItem ? 'Modifier' : 'Nouvel' }} Article</h2>
+    <div class="input-group">
+      <label>Nom</label>
+      <input type="text" v-model="itemForm.name" placeholder="Ex: Laptop">
+    </div>
+    <div class="input-group">
+      <label>Description</label>
+      <textarea v-model="itemForm.description" placeholder="Description de l'article"></textarea>
+    </div>
+    <div class="input-group">
+      <label>Image (URL)</label>
+      <input type="url" v-model="itemForm.image" placeholder="https://...">
+    </div>
+    <div class="input-group">
+      <label>Catégorie</label>
+      <select v-model="itemForm.category_id" style="width: 100%; padding: 0.9rem; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 1rem;">
+        <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label>Prix (€)</label>
+      <input type="number" step="0.01" v-model="itemForm.price" placeholder="Ex: 99.99">
+    </div>
+    <div class="input-group">
+      <label>Lien</label>
+      <input type="url" v-model="itemForm.link" placeholder="https://...">
+    </div>
+    <div class="input-group">
+      <label><input type="checkbox" v-model="itemForm.owned" style="width: auto; margin-right: 0.5rem;">Déjà acheté</label>
+    </div>
+    <div class="modal-buttons">
+      <div class="dropdown-container" :class="{ open: showActionDropdown }" role="group" @keyup.esc="showActionDropdown = false">
+        <button type="button" class="btn btn-primary dropdown-btn" @click="selectItemAction(lastItemAction)">
+          {{ lastItemAction === 'add' ? 'Ajouter' : lastItemAction === 'create' ? 'Ajouter & créer' : 'Ajouter & cloner' }}
+        </button>
+        <button type="button" class="dropdown-toggle" @click="toggleActionDropdown" aria-haspopup="true" :aria-expanded="showActionDropdown.toString()">
+          <span class="dropdown-arrow">{{ showActionDropdown ? '▲' : '▼' }}</span>
+        </button>
+        <div class="dropdown-menu" v-show="showActionDropdown" role="menu">
+          <button type="button" role="menuitemradio" class="dropdown-item" @click="selectLastItemAction('add')" :class="{ active: lastItemAction === 'add' }">Ajouter</button>
+          <button type="button" role="menuitemradio" class="dropdown-item" @click="selectLastItemAction('create')" :class="{ active: lastItemAction === 'create' }">Ajouter & créer</button>
+          <button type="button" role="menuitemradio" class="dropdown-item" @click="selectLastItemAction('clone')" :class="{ active: lastItemAction === 'clone' }">Ajouter & cloner</button>
+        </div>
+      </div>
+      <button type="button" class="btn back-btn" @click="closeItemForm">Annuler</button>
+    </div>
+  </div>
+</div>
+<div v-if="selectedItem" class="modal-overlay" @click.self="selectedItem = null">
+  <div class="modal detail-modal">
+    <img v-if="selectedItem.image" :src="selectedItem.image" :alt="selectedItem.name" class="item-image-large" />
+    <div class="detail-content">
+      <div class="item-header">
+        <h2 style="margin: 0;">{{ selectedItem.name }}</h2>
+        <div class="item-price-badge" v-if="selectedItem.price">{{ selectedItem.price }}€</div>
+      </div>
+      <div class="item-date" v-if="selectedItem.last_interest_date">Nicolas a renouvelé son intérêt le {{ formatDate(selectedItem.last_interest_date) }}</div>
+      <div v-if="!isAdmin && getInterestCount(selectedItem) > 0" class="interest-counter">🎁 {{ getInterestCount(selectedItem) }} personne(s) intéressée(s)</div>
+      <p v-if="selectedItem.description" style="margin: 1.5rem 0;">{{ selectedItem.description }}</p>
+      <div class="detail-meta">
+        <a v-if="selectedItem.link" :href="selectedItem.link" target="_blank" class="item-link">Voir le produit →</a>
+      </div>
+      <div class="detail-actions">
+        <button type="button" tabindex="-1" v-if="!isAdmin" class="btn btn-success btn-small" :class="{ 'btn-primary': isUserInterested(selectedItem) }" @click.prevent="toggleInterest(selectedItem)" @touchstart.stop @touchend.stop>{{ isUserInterested(selectedItem) ? '✓ Intéressé' : 'Ça m\'intéresse' }}</button>
+        <button type="button" v-if="isAdmin" class="btn btn-primary btn-small" @click="editItem(selectedItem); selectedItem = null">✏️ Modifier</button>
+        <button type="button" v-if="isAdmin" class="btn btn-success btn-small" @click="renewInterest(selectedItem)">🔄 Renouveler l'intérêt</button>
+        <button type="button" v-if="isAdmin && !selectedItem.owned" class="btn btn-secondary btn-small" @click="markOwned(selectedItem)">✔ Marquer possédé</button>
+        <button type="button" class="btn back-btn" @click="selectedItem = null">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
