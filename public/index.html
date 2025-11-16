@@ -126,10 +126,10 @@
                  @touchstart="onTouchStart($event)" 
                  @touchend="onTouchEnd('wishlist', $event)">
               <div 
-                v-for="(item, index) in wishlistItems.slice(0, 5)" 
+                v-for="(item, index) in wishlistItems.slice(wishlistIndex, wishlistIndex + 5)" 
                 :key="item.id"
                 class="item-card"
-                :class="{ active: index === wishlistIndex }"
+                :class="{ active: item === currentWishlistItem }"
                 @click="showItemDetail(item)">
                 <div class="item-card-top">
                   <img v-if="item.image" :src="item.image" :alt="item.name" class="item-image" />
@@ -170,10 +170,10 @@
                  @touchstart="onTouchStart($event)" 
                  @touchend="onTouchEnd('owned', $event)">
               <div 
-                v-for="(item, index) in ownedItems.slice(0, 5)" 
+                v-for="(item, index) in ownedItems.slice(ownedIndex, ownedIndex + 5)" 
                 :key="item.id"
                 class="item-card owned"
-                :class="{ active: index === ownedIndex }"
+                :class="{ active: item === currentOwnedItem }"
                 @click="showItemDetail(item)">
                 <div class="item-card-top">
                   <img v-if="item.image" :src="item.image" :alt="item.name" class="item-image" />
