@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AyGift - Idées Cadeaux</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+</head>
+<body>
+  <div class="cloud"></div>
+  <div class="cloud"></div>
+  <div class="cloud"></div>
+  <div class="cloud"></div>
+  <div class="cloud"></div>
+  
+  <div id="app">
+    <!-- Fullscreen Welcome Screen -->
+    <div v-if="showWelcome" class="welcome-screen">
+      <div class="welcome-content">
+        <div v-if="welcomeStep === 'choice'">
+          <h1 class="welcome-title">AyGift</h1>
+          <p>Bienvenue sur la page AyGift de Nicolas, ici vous pouvez trouver des idées cadeaux personnalisées.</p>
+          <div class="welcome-actions">
+            <button type="button" class="welcome-btn primary" @click="selectGuest">Je cherche une idée</button>
+            <button type="button" class="welcome-btn secondary" @click="selectNicolas">Je suis Nicolas</button>
+          </div>
+        </div>
+        
+        <div v-if="welcomeStep === 'nicolas'">
+          <h1 class="welcome-title">Connexion</h1>
+          <div class="welcome-field">
+            <input type="password" v-model="password" @keyup.enter="login" placeholder="Mot de passe" class="welcome-input">
+          </div>
+          <div class="welcome-actions row">
+            <button type="button" class="welcome-btn primary" @click="login">Se connecter</button>
+            <button type="button" class="welcome-btn ghost" @click="welcomeStep='choice'">Retour</button>
+          </div>
+        </div>
+        
+        <div v-if="welcomeStep === 'guest'">
+          <h1 class="welcome-title">Entrez votre nom</h1>
+          <p>Rassurez-vous, Nicolas ne verra pas vos choix.</p>
+
+          <div class="welcome-field">
+            <input type="text" v-model="guestName" @keyup.enter="setGuestName" placeholder="Entrez votre nom" class="welcome-input">
+          </div>
+          <div class="welcome-actions row">
+            <button type="button" class="welcome-btn primary" @click="setGuestName">Commencer</button>
+            <button type="button" class="welcome-btn ghost" @click="welcomeStep='choice'">Retour</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Main App -->
+    <div v-else class="container">
+      <div class="header">
+        <h1>AyGift</h1>
+        <p v-if="isAdmin">
+          Mode Admin
+          <button type="button" class="logout-btn" @click="logout">Déconnexion</button>
+        </p>
+        <p v-else>Bonjour {{ userName }} !</p>
+      </div>
+      
+      <!-- Search Bar -->
+      <div class="search-container">
+        <span class="search-icon">🔍</span>
+        <input 
+          type="text" 
+          class="search-input" 
+          v-model="searchQuery"
+          placeholder="Rechercher un article ou une catégorie..." 
+        />
+      </div>
+      
+      <!-- Price Filter -->
+      <button type="button" class="filter-toggle-btn" @click="togglePriceFilter">
+        <span>Filtrer par prix</span>
+        <span>{{ showPriceFilter ? '▲' : '▼' }}</span>
+      </button>
+      <div class="price-filter" :class="{ collapsed: !showPriceFilter }">
+        <h4>Filtrer par prix</h4>
+        <div class="price-inputs">
+          <input type="number" v-model.number="priceMin" placeholder="Min (€)" min="0" />
+          <span>-</span>
+          <input type="number" v-model.number="priceMax" placeholder="Max (€)" min="0" />
+        </div>
+      </div>
+      
+      <!-- Admin Toolbar -->
+      <div v-if="isAdmin" class="admin-toolbar">
+        <button type="button" class="btn btn-success btn-small" @click="showCategoryForm = true">+ Nouvelle Catégorie</button>
+        <button type="button" class="btn btn-danger btn-small" @click="resetAllBookings">Réinitialiser Intérêts</button>
+      </div>
+      
+      <!-- Category Menu -->
+      <div class="category-menu">
+        <button 
+          type="button"
+          class="category-btn" 
+          :class="{ active: selectedCategory === null }"
+          @click="selectCategory(null)">
+          Toutes
+        </button>
+        <button 
+          type="button"
+          v-for="cat in categories" 
+          :key="cat.id"
+          class="category-btn"
+          :class="{ active: selectedCategory === cat.id }"
+          @click="handleCategoryClick(cat)">
+          {{ cat.name }}
+        </button>
+      </div>
+      
+      <!-- Item Carousels -->
+      <div v-if="loading" class="loading">Chargement...</div>
+      <div v-else>
+        <!-- Wishlist Carousel -->
+        <div v-if="wishlistItems.length > 0" class="carousel-section">
+          <h2 class="carousel-title">Ce que j'aimerais</h2>
+          <div class="carousel-container">
+            <div class="carousel" 
+                 @touchstart="onTouchStart($event)" 
+                 @touchend="onTouchEnd('wishlist', $event)">
+              <div 
+                v-for="(item, index) in wishlistItems.slice(0, 5)" 
+                :key="item.id"
+                class="item-card"
+                :class="{ active: index === wishlistIndex }"
+                @click="showItemDetail(item)">
+                <div class="item-card-top">
+                  <img v-if="item.image" :src="item.image" :alt="item.name" class="item-image" />
+                  <div class="item-content">
+                    <div class="item-header">
+                      <h3>{{ item.name }}</h3>
+                      <div class="item-price-badge" v-if="item.price">{{ item.price }}€</div>
+                    </div>
+                    <div class="item-date" v-if="item.last_interest_date">
+                      Nicolas a renouvelé son intérêt le {{ formatDate(item.last_interest_date) }}
+                    </div>
+                  </div>
+                </div>
+                <div class="item-card-bottom" v-if="!isAdmin">
+                  <button 
+                    type="button"
+                    tabindex="-1"
+                    class="interest-button" 
+                    :class="{ interested: isUserInterested(item) }"
+                    @click.prevent.stop="toggleInterest(item)"
+                    @touchstart.stop @touchend.stop>
+                    {{ isUserInterested(item) ? '✓ Intéressé' : 'Ça m\'intéresse' }} 
+                    <span class="interest-count">({{ getInterestCount(item) }})</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <button type="button" v-if="wishlistItems.length > 1" class="nav-arrow left" @click="prevWishlist" aria-label="Précédent">‹</button>
+            <button type="button" v-if="wishlistItems.length > 1" class="nav-arrow right" @click="nextWishlist" aria-label="Suivant">›</button>
+          </div>
+        </div>
+        
+        <!-- Owned Items Carousel -->
+        <div v-if="ownedItems.length > 0" class="carousel-section">
+          <h2 class="carousel-title">Ce que j'ai déjà</h2>
+          <div class="carousel-container">
+            <div class="carousel"
+                 @touchstart="onTouchStart($event)" 
+                 @touchend="onTouchEnd('owned', $event)">
+              <div 
+                v-for="(item, index) in ownedItems.slice(0, 5)" 
+                :key="item.id"
+                class="item-card owned"
+                :class="{ active: index === ownedIndex }"
+                @click="showItemDetail(item)">
+                <div class="item-card-top">
+                  <img v-if="item.image" :src="item.image" :alt="item.name" class="item-image" />
+                  <div class="item-content">
+                    <div class="item-header">
+                      <h3>{{ item.name }}</h3>
+                      <div class="item-price-badge" v-if="item.price">{{ item.price }}€</div>
+                    </div>
+                    <div class="item-date" v-if="item.last_interest_date">
+                      Nicolas a renouvelé son intérêt le {{ formatDate(item.last_interest_date) }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button type="button" v-if="ownedItems.length > 1" class="nav-arrow left" @click="prevOwned" aria-label="Précédent">‹</button>
+            <button type="button" v-if="ownedItems.length > 1" class="nav-arrow right" @click="nextOwned" aria-label="Suivant">›</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Category Form Modal -->
+    <div v-if="showCategoryForm" class="modal-overlay" @click.self="showCategoryForm = false">
+      <div class="modal">
+        <h2>{{ editingCategory ? 'Modifier' : 'Nouvelle' }} Catégorie</h2>
+        <div class="input-group">
+          <label>Nom</label>
+          <input type="text" v-model="categoryForm.name" placeholder="Ex: Électronique">
+        </div>
+        <div class="input-group">
+          <label>Description</label>
+          <textarea v-model="categoryForm.description" placeholder="Description de la catégorie"></textarea>
+        </div>
+        <div class="modal-buttons">
+          <button type="button" class="btn btn-primary" @click="saveCategory">Enregistrer</button>
+          <button type="button" class="btn back-btn" @click="closeCategoryForm">Annuler</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Item Form Modal -->
+    <div v-if="showItemForm" class="modal-overlay" @click.self="showItemForm = false">
+      <div class="modal">
+        <h2>{{ editingItem ? 'Modifier' : 'Nouvel' }} Article</h2>
+        <div class="input-group">
+          <label>Nom</label>
+          <input type="text" v-model="itemForm.name" placeholder="Ex: Laptop">
+        </div>
+        <div class="input-group">
+          <label>Description</label>
+          <textarea v-model="itemForm.description" placeholder="Description de l'article"></textarea>
+        </div>
+        <div class="input-group">
+          <label>Image (URL)</label>
+          <input type="url" v-model="itemForm.image" placeholder="https://...">
+        </div>
+        <div class="input-group">
+          <label>Catégorie</label>
+          <select v-model="itemForm.category_id" style="width: 100%; padding: 0.9rem; border: 2px solid #e2e8f0; border-radius: 12px; font-size: 1rem;">
+            <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+          </select>
+        </div>
+        <div class="input-group">
+          <label>Prix (€)</label>
+          <input type="number" step="0.01" v-model="itemForm.price" placeholder="Ex: 99.99">
+        </div>
+        <div class="input-group">
+          <label>Lien</label>
+          <input type="url" v-model="itemForm.link" placeholder="https://...">
+        </div>
+        <div class="input-group">
+          <label>
+            <input type="checkbox" v-model="itemForm.owned" style="width: auto; margin-right: 0.5rem;">
+            Déjà acheté
+          </label>
+        </div>
+        <div class="modal-buttons">
+          <button type="button" class="btn btn-primary" @click="saveItem">Enregistrer</button>
+          <button type="button" class="btn back-btn" @click="closeItemForm">Annuler</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Item Detail Modal -->
+    <div v-if="selectedItem" class="modal-overlay" @click.self="selectedItem = null">
+      <div class="modal detail-modal">
+        <img v-if="selectedItem.image" :src="selectedItem.image" :alt="selectedItem.name" class="item-image-large" />
+        <div class="detail-content">
+          <div class="item-header">
+            <h2 style="margin: 0;">{{ selectedItem.name }}</h2>
+            <div class="item-price-badge" v-if="selectedItem.price">{{ selectedItem.price }}€</div>
+          </div>
+          <div class="item-date" v-if="selectedItem.last_interest_date">
+            Nicolas a renouvelé son intérêt le {{ formatDate(selectedItem.last_interest_date) }}
+          </div>
+          <div v-if="!isAdmin && getInterestCount(selectedItem) > 0" class="interest-counter">
+            🎁 {{ getInterestCount(selectedItem) }} personne(s) intéressée(s) par cette idée de cadeau
+          </div>
+          <p v-if="selectedItem.description" style="margin: 1.5rem 0;">{{ selectedItem.description }}</p>
+          <div class="detail-meta">
+            <a v-if="selectedItem.link" :href="selectedItem.link" target="_blank" class="item-link">Voir le produit →</a>
+          </div>
+          
+          <div class="detail-actions">
+            <button type="button" tabindex="-1" v-if="!isAdmin" 
+              class="btn btn-success btn-small" 
+              :class="{ 'btn-primary': isUserInterested(selectedItem) }"
+              @click.prevent="toggleInterest(selectedItem)"
+              @touchstart.stop @touchend.stop>
+              {{ isUserInterested(selectedItem) ? '✓ Intéressé' : 'Ça m\'intéresse' }}
+            </button>
+            <button type="button" v-if="isAdmin" class="btn btn-primary btn-small" @click="editItem(selectedItem); selectedItem = null">✏️ Modifier</button>
+            <button type="button" v-if="isAdmin" class="btn btn-success btn-small" @click="renewInterest(selectedItem)">🔄 Renouveler l'intérêt</button>
+            <button type="button" class="btn back-btn" @click="selectedItem = null">Fermer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
+</body>
+</html>

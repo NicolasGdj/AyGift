@@ -1,0 +1,6 @@
+.github/
+node_modules/
+database.sqlite
+database.sqlite-journal
+*.log
+.env
