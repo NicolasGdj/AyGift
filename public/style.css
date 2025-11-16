@@ -75,6 +75,9 @@ body {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   max-width: 480px;
   width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
   text-align: center;
   border: 1px solid rgba(255, 255, 255, 0.5);
 }
@@ -208,6 +211,29 @@ body {
 
 .back-btn:hover {
   background: #d0d0d0;
+}
+
+/* Mobile modal styles */
+@media (max-width: 768px) {
+  .modal {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+    padding: 2rem;
+    overscroll-behavior-y: contain;
+  }
+  
+  .detail-modal {
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+    padding: 2rem;
+    overscroll-behavior-y: contain;
+  }
 }
 
 /* Fullscreen welcome screen */
@@ -401,19 +427,25 @@ body {
 .search-input {
   width: 100%;
   padding: 1rem 1rem 1rem 3rem;
-  border: none;
+  border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 50px;
   font-size: 1rem;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  color: white;
   transition: all 0.3s;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.search-input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .search-input:focus {
   outline: none;
-  box-shadow: 0 12px 48px rgba(99, 102, 241, 0.2);
-  background: white;
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
 }
 
 .search-icon {
@@ -421,7 +453,7 @@ body {
   left: 1.2rem;
   top: 50%;
   transform: translateY(-50%);
-  color: #64748b;
+  color: rgba(255, 255, 255, 0.8);
   font-size: 1.2rem;
 }
 
@@ -560,8 +592,6 @@ body {
   color: #1e293b;
   z-index: 1000;
   pointer-events: auto;
-}
-}
 }
 
 .nav-arrow:hover {
@@ -890,6 +920,9 @@ body {
 /* Item detail modal */
 .detail-modal {
   max-width: 700px;
+  max-height: 90vh;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
 }
 
 .detail-modal .item-image-large {
