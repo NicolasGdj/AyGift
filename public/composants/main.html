@@ -58,7 +58,7 @@
                   <h3 :title="item.name">{{ item.name }}</h3>
                   <div class="item-price-badge" v-if="item.price">{{ item.price }}€</div>
                 </div>
-                <div class="item-date" v-if="item.last_interest_date">Nicolas a renouvelé son intérêt le {{ formatDate(item.last_interest_date) }}</div>
+                <div class="item-date" v-if="item.last_interest_date">Nicolas a renouvelé son intérêt le <br>{{ formatDate(item.last_interest_date) }}</div>
               </div>
             </div>
             <div class="item-card-bottom" v-if="!isAdmin">
@@ -91,7 +91,6 @@
                   <h3 :title="item.name">{{ item.name }}</h3>
                   <div class="item-price-badge" v-if="item.price">{{ item.price }}€</div>
                 </div>
-                <div class="item-date" v-if="item.last_interest_date">Nicolas a renouvelé son intérêt le {{ formatDate(item.last_interest_date) }}</div>
               </div>
             </div>
           </div>
