@@ -44,7 +44,7 @@
               <img v-if="item.image" :src="item.image" :alt="item.name" class="item-image" />
               <div class="item-content">
                 <div class="item-header">
-                  <h3>{{ item.name }}</h3>
+                  <h3 :title="item.name">{{ item.name }}</h3>
                   <div class="item-price-badge" v-if="item.price">{{ item.price }}€</div>
                 </div>
                 <div class="item-date" v-if="item.last_interest_date">Nicolas a renouvelé son intérêt le {{ formatDate(item.last_interest_date) }}</div>
@@ -77,7 +77,7 @@
               <img v-if="item.image" :src="item.image" :alt="item.name" class="item-image" />
               <div class="item-content">
                 <div class="item-header">
-                  <h3>{{ item.name }}</h3>
+                  <h3 :title="item.name">{{ item.name }}</h3>
                   <div class="item-price-badge" v-if="item.price">{{ item.price }}€</div>
                 </div>
                 <div class="item-date" v-if="item.last_interest_date">Nicolas a renouvelé son intérêt le {{ formatDate(item.last_interest_date) }}</div>
