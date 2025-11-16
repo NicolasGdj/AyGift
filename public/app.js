@@ -47,7 +47,10 @@ createApp({
       dragListenersAdded: false,
       dragStarted: false,
       lastItemAction: 'add',
-      showActionDropdown: false
+      showActionDropdown: false,
+      showBulkImport: false,
+      bulkJson: '',
+      bulkImportResult: null
     };
   },
   watch: {
@@ -332,6 +335,25 @@ createApp({
         this.showNotification('Erreur lors du renouvellement', 'error');
       }
     },
+    async markOwned(item) {
+      try {
+        const response = await fetch(`/api/items/${item.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ owned: true })
+        });
+        if (response.ok) {
+          await this.loadItems(true);
+          this.showNotification('Marqué comme possédé');
+          this.selectedItem = null;
+        } else {
+          this.showNotification('Erreur lors de la mise à jour', 'error');
+        }
+      } catch (error) {
+        console.error('Error marking owned:', error);
+        this.showNotification('Erreur lors de la mise à jour', 'error');
+      }
+    },
     async saveItem(action = 'add') {
       try {
         const method = this.editingItem ? 'PUT' : 'POST';
@@ -510,6 +532,54 @@ createApp({
     selectLastItemAction(action) {
       this.lastItemAction = action;
       this.showActionDropdown = false;
+    },
+    openBulkImport() {
+      this.showBulkImport = true;
+      this.bulkImportResult = null;
+      this.bulkJson = '';
+    },
+    closeBulkImport() {
+      this.showBulkImport = false;
+    },
+    async submitBulkJson() {
+      if (!this.bulkJson.trim()) return;
+      let parsed;
+      try {
+        parsed = JSON.parse(this.bulkJson);
+      } catch (e) {
+        this.showNotification('JSON invalide', 'error');
+        return;
+      }
+      try {
+        const response = await fetch('/api/items/bulk', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(parsed)
+        });
+        const data = await response.json();
+        if (response.ok || response.status === 207) {
+          this.bulkImportResult = data;
+          await this.loadItems(true);
+          this.showNotification(`Créés: ${data.created.length} / Erreurs: ${data.errors.length}`);
+        } else {
+          this.showNotification(data.error || 'Erreur import', 'error');
+        }
+      } catch (error) {
+        this.showNotification('Erreur réseau import', 'error');
+      }
+    },
+    fillBulkExample() {
+      this.bulkJson = `[
+  {
+    "name": "Nintendo Switch",
+    "category_name": "Gaming",
+    "description": "Console portable polyvalente",
+    "price": 299.99,
+    "link": "https://example.com/switch",
+    "image": "https://example.com/switch.jpg",
+    "owned": false
+  }
+]`;
     }
   },
   mounted() {

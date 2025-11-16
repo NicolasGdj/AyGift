@@ -93,7 +93,8 @@
       <div v-if="isAdmin" class="admin-toolbar">
         <button type="button" class="btn btn-success btn-small" @click="showCategoryForm = true">+ Nouvelle Catégorie</button>
         <button type="button" class="btn btn-primary btn-small" @click="addNewItem">+ Nouvel Article</button>
-        <button type="button" class="btn btn-danger btn-small" @click="resetAllBookings">Réinitialiser Intérêts</button>
+          <button type="button" class="btn btn-info btn-small" @click="openBulkImport">+ Bulk</button>
+          <button type="button" class="btn btn-danger btn-small" @click="resetAllBookings">Réinitialiser Intérêts</button>
       </div>
       
       <!-- Category Menu -->
@@ -303,12 +304,44 @@
             </button>
             <button type="button" v-if="isAdmin" class="btn btn-primary btn-small" @click="editItem(selectedItem); selectedItem = null">✏️ Modifier</button>
             <button type="button" v-if="isAdmin" class="btn btn-success btn-small" @click="renewInterest(selectedItem)">🔄 Renouveler l'intérêt</button>
+            <button type="button" v-if="isAdmin && !selectedItem.owned" class="btn btn-secondary btn-small" @click="markOwned(selectedItem)">✔ Marquer possédé</button>
             <button type="button" class="btn back-btn" @click="selectedItem = null">Fermer</button>
           </div>
         </div>
       </div>
     </div>
-    
+     <!-- Bulk JSON Import Modal -->
+    <div v-if="showBulkImport" class="modal-overlay" @click.self="closeBulkImport">
+      <div class="modal" style="max-width:680px">
+        <h2>Import Bulk as JSON</h2>
+        <div class="input-group">
+          <label>JSON</label>
+          <textarea v-model="bulkJson" placeholder='[
+  {
+    "name": "Nintendo Switch",
+    "category_name": "Gaming",
+    "description": "Console portable polyvalente",
+    "price": 299.99,
+    "link": "https://example.com/switch",
+    "image": "https://example.com/switch.jpg",
+    "owned": false
+  }
+]' style="min-height:220px"></textarea>
+        </div>
+        <div class="modal-buttons">
+          <button type="button" class="btn btn-info" @click="fillBulkExample">Example</button>
+          <button type="button" class="btn btn-primary" @click="submitBulkJson">Importer</button>
+          <button type="button" class="btn back-btn" @click="closeBulkImport">Annuler</button>
+        </div>
+        <div v-if="bulkImportResult" style="margin-top:1.2rem;text-align:left;font-size:0.85rem">
+          <div v-if="bulkImportResult.created.length" style="color:#059669">✔ {{ bulkImportResult.created.length }} article(s) créé(s)</div>
+          <div v-if="bulkImportResult.errors.length" style="color:#dc2626">⚠ {{ bulkImportResult.errors.length }} erreur(s)</div>
+          <ul v-if="bulkImportResult.errors.length" style="margin-top:0.5rem;padding-left:1.2rem">
+            <li v-for="err in bulkImportResult.errors" :key="err.index">Index {{ err.index }} ({{ err.name || 'sans nom' }}): {{ err.error }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
     <!-- Notifications -->
     <div class="notifications">
       <div 
@@ -319,6 +352,7 @@
         {{ notification.message }}
       </div>
     </div>
+  
   </div>
   
     <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>

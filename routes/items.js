@@ -67,6 +67,62 @@ router.post('/', async (req, res) => {
   }
 });
 
+// BULK create items (accepts single object or array)
+router.post('/bulk', async (req, res) => {
+  try {
+    const payload = req.body;
+    const itemsInput = Array.isArray(payload) ? payload : [payload];
+    const created = [];
+    const errors = [];
+
+    // Preload categories by name to reduce queries
+    const allCategories = await Category.findAll();
+    const categoryByName = new Map(allCategories.map(c => [c.name.toLowerCase(), c]));
+
+    for (let i = 0; i < itemsInput.length; i++) {
+      const raw = itemsInput[i];
+      try {
+        if (!raw.name) throw new Error('Missing name');
+
+        let categoryId = raw.category_id;
+        if (!categoryId) {
+          if (raw.category_name) {
+            const key = raw.category_name.toLowerCase();
+            let cat = categoryByName.get(key);
+            if (!cat) {
+              cat = await Category.create({ name: raw.category_name, description: raw.category_description || null });
+              categoryByName.set(key, cat);
+            }
+            categoryId = cat.id;
+          } else {
+            throw new Error('Missing category_id or category_name');
+          }
+        }
+
+        const toCreate = {
+          category_id: categoryId,
+          name: raw.name,
+            description: raw.description || null,
+          price: raw.price || null,
+          link: raw.link || null,
+          image: raw.image || null,
+          owned: !!raw.owned,
+          last_interest_date: raw.last_interest_date || new Date().toISOString()
+        };
+
+        const item = await Item.create(toCreate);
+        created.push(item);
+      } catch (e) {
+        errors.push({ index: i, name: raw.name, error: e.message });
+      }
+    }
+
+    res.status(errors.length ? 207 : 201).json({ created, errors });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // PUT update item
 router.put('/:id', async (req, res) => {
   try {
