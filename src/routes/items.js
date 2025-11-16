@@ -55,7 +55,7 @@ const router = express.Router();
 // GET all items with pagination and filters
 router.get('/', async (req, res) => {
   try {
-    const { offset = 0, limit = 20, category_id, search, priceMin, priceMax } = req.query;
+    const { offset = 0, limit = 20, category_id, search, priceMin, priceMax, owned } = req.query;
     
     let where = {};
     
@@ -74,6 +74,10 @@ router.get('/', async (req, res) => {
         { name: { [Op.like]: `%${search}%` } },
         { description: { [Op.like]: `%${search}%` } }
       ];
+    }
+    
+    if (owned !== undefined) {
+      where.owned = owned === 'true';
     }
     
     const items = await Item.findAll({

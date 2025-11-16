@@ -34,6 +34,10 @@ createApp({
       categories: [],
       items: [],
       bookings: [],
+      wishlistItems: [],
+      ownedItems: [],
+      wishlistOffset: 10,
+      ownedOffset: 10,
       selectedCategory: null,
       selectedItem: null,
       searchQuery: '',
@@ -68,14 +72,13 @@ createApp({
     };
   },
   watch: {
-    searchQuery() { clearTimeout(this.debounceTimeout); this.debounceTimeout = setTimeout(() => { this.loadItems(true); }, 500); },
-    priceMin() { clearTimeout(this.debounceTimeout); this.debounceTimeout = setTimeout(() => { this.loadItems(true); }, 500); },
-    priceMax() { clearTimeout(this.debounceTimeout); this.debounceTimeout = setTimeout(() => { this.loadItems(true); }, 500); }
+    searchQuery() { clearTimeout(this.debounceTimeout); this.debounceTimeout = setTimeout(() => { this.loadCarousels(); }, 500); },
+    priceMin() { clearTimeout(this.debounceTimeout); this.debounceTimeout = setTimeout(() => { this.loadCarousels(); }, 500); },
+    priceMax() { clearTimeout(this.debounceTimeout); this.debounceTimeout = setTimeout(() => { this.loadCarousels(); }, 500); },
+    selectedCategory() { this.loadCarousels(); }
   },
   computed: {
     filteredItems() { return this.items; },
-    wishlistItems() { return this.filteredItems.filter(i => !i.owned).sort((a,b) => { const da = a.last_interest_date ? new Date(a.last_interest_date) : new Date(0); const db = b.last_interest_date ? new Date(b.last_interest_date) : new Date(0); return db - da; }); },
-    ownedItems() { return this.filteredItems.filter(i => i.owned).sort((a,b) => { const da = a.last_interest_date ? new Date(a.last_interest_date) : new Date(0); const db = b.last_interest_date ? new Date(b.last_interest_date) : new Date(0); return db - da; }); },
     currentWishlistItem() { return this.wishlistItems[0] || null; },
     currentOwnedItem() { return this.ownedItems[0] || null; }
   },

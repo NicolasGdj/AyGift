@@ -29,13 +29,13 @@ export const itemMethods = {
   async renewInterest(item) {
     try {
       const response = await fetch(`/api/items/${item.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ last_interest_date: new Date().toISOString() }) });
-      if (response.ok) { await this.loadItems(true); this.showNotification('Intérêt renouvelé avec succès'); this.selectedItem = null; } else { this.showNotification('Erreur lors du renouvellement', 'error'); }
+      if (response.ok) { await this.loadCarousels(); this.showNotification('Intérêt renouvelé avec succès'); this.selectedItem = null; } else { this.showNotification('Erreur lors du renouvellement', 'error'); }
     } catch (error) { console.error('Error renewing interest:', error); this.showNotification('Erreur lors du renouvellement', 'error'); }
   },
   async markOwned(item) {
     try {
       const response = await fetch(`/api/items/${item.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ owned: true }) });
-      if (response.ok) { await this.loadItems(true); this.showNotification('Marqué comme possédé'); this.selectedItem = null; } else { this.showNotification('Erreur lors de la mise à jour', 'error'); }
+      if (response.ok) { await this.loadCarousels(); this.showNotification('Marqué comme possédé'); this.selectedItem = null; } else { this.showNotification('Erreur lors de la mise à jour', 'error'); }
     } catch (error) { console.error('Error marking owned:', error); this.showNotification('Erreur lors de la mise à jour', 'error'); }
   },
   async saveItem(action = 'add') {
@@ -45,7 +45,7 @@ export const itemMethods = {
       const payload = { ...this.itemForm, last_interest_date: new Date().toISOString() };
       const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       if (response.ok) {
-        await this.loadItems(true);
+        await this.loadCarousels();
         this.showNotification(this.editingItem ? 'Article modifié avec succès' : 'Article ajouté avec succès');
         if (action === 'add' || this.editingItem) { this.closeItemForm(); }
         else if (action === 'create') { this.editingItem = null; this.itemForm = { name: '', description: '', image: '', category_id: null, price: '', link: '', owned: false }; }
@@ -75,6 +75,7 @@ export const itemMethods = {
         this.items = this.items.filter(i => i.id !== item.id);
         this.bookings = this.bookings.filter(b => b.item_id !== item.id);
         if (this.selectedItem && this.selectedItem.id === item.id) this.selectedItem = null;
+        await this.loadCarousels();
         this.showNotification('Article supprimé');
       } else {
         this.showNotification('Erreur suppression article', 'error');

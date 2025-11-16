@@ -8,11 +8,78 @@ export const dataMethods = {
       ]);
       this.categories = await catRes.json();
       this.bookings = await bookingsRes.json();
+      await this.loadCarousels();
       await this.loadItems(true);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
       if (showLoading) this.loading = false;
+    }
+  },
+  async loadCarousels() {
+    try {
+      const baseParams = new URLSearchParams({
+        limit: 10,
+        offset: 0
+      });
+      if (this.selectedCategory) baseParams.append('category_id', this.selectedCategory);
+      if (this.searchQuery.trim()) baseParams.append('search', this.searchQuery);
+      if (this.priceMin) baseParams.append('priceMin', this.priceMin);
+      if (this.priceMax) baseParams.append('priceMax', this.priceMax);
+
+      const wishlistParams = new URLSearchParams(baseParams);
+      wishlistParams.append('owned', 'false');
+      const ownedParams = new URLSearchParams(baseParams);
+      ownedParams.append('owned', 'true');
+
+      const [wishlistRes, ownedRes] = await Promise.all([
+        fetch(`/api/items?${wishlistParams}`),
+        fetch(`/api/items?${ownedParams}`)
+      ]);
+      this.wishlistItems = (await wishlistRes.json()).sort((a,b) => { const da = a.last_interest_date ? new Date(a.last_interest_date) : new Date(0); const db = b.last_interest_date ? new Date(b.last_interest_date) : new Date(0); return db - da; });
+      this.ownedItems = (await ownedRes.json()).sort((a,b) => { const da = a.last_interest_date ? new Date(a.last_interest_date) : new Date(0); const db = b.last_interest_date ? new Date(b.last_interest_date) : new Date(0); return db - da; });
+      this.wishlistOffset = 10;
+      this.ownedOffset = 10;
+    } catch (error) {
+      console.error('Error loading carousels:', error);
+    }
+  },
+  async loadMoreWishlist() {
+    try {
+      const params = new URLSearchParams({
+        offset: this.wishlistOffset,
+        limit: 10,
+        owned: false
+      });
+      if (this.selectedCategory) params.append('category_id', this.selectedCategory);
+      if (this.searchQuery.trim()) params.append('search', this.searchQuery);
+      if (this.priceMin) params.append('priceMin', this.priceMin);
+      if (this.priceMax) params.append('priceMax', this.priceMax);
+      const response = await fetch(`/api/items?${params}`);
+      const newItems = await response.json();
+      this.wishlistItems.push(...newItems.sort((a,b) => { const da = a.last_interest_date ? new Date(a.last_interest_date) : new Date(0); const db = b.last_interest_date ? new Date(b.last_interest_date) : new Date(0); return db - da; }));
+      this.wishlistOffset += newItems.length;
+    } catch (error) {
+      console.error('Error loading more wishlist items:', error);
+    }
+  },
+  async loadMoreOwned() {
+    try {
+      const params = new URLSearchParams({
+        offset: this.ownedOffset,
+        limit: 10,
+        owned: true
+      });
+      if (this.selectedCategory) params.append('category_id', this.selectedCategory);
+      if (this.searchQuery.trim()) params.append('search', this.searchQuery);
+      if (this.priceMin) params.append('priceMin', this.priceMin);
+      if (this.priceMax) params.append('priceMax', this.priceMax);
+      const response = await fetch(`/api/items?${params}`);
+      const newItems = await response.json();
+      this.ownedItems.push(...newItems.sort((a,b) => { const da = a.last_interest_date ? new Date(a.last_interest_date) : new Date(0); const db = b.last_interest_date ? new Date(b.last_interest_date) : new Date(0); return db - da; }));
+      this.ownedOffset += newItems.length;
+    } catch (error) {
+      console.error('Error loading more owned items:', error);
     }
   },
   async loadItems(reset = false) {
@@ -52,7 +119,7 @@ export const dataMethods = {
     this.searchQuery = '';
     this.priceMin = null;
     this.priceMax = null;
-    this.loadItems(true);
+    this.loadCarousels();
   },
   handleCategoryClick(category) {
     this.selectCategory(category.id);

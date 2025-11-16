@@ -68,7 +68,7 @@
               </button>
             </div>
           </div>
-          <div v-if="hasMore" class="item-card load-more-card" @click="loadItems(false)">
+          <div class="item-card load-more-card" @click="loadMoreWishlist()">
             <div class="item-content">
               <h3>Charger plus</h3>
               <div v-if="loadingMore" class="loading-spinner"></div>
@@ -94,7 +94,7 @@
               </div>
             </div>
           </div>
-          <div v-if="hasMore" class="item-card load-more-card" @click="loadItems(false)">
+          <div class="item-card load-more-card" @click="loadMoreOwned()">
             <div class="item-content">
               <h3>Charger plus</h3>
               <div v-if="loadingMore" class="loading-spinner"></div>

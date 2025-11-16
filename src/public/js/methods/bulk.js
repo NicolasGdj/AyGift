@@ -10,7 +10,7 @@ export const bulkMethods = {
       const data = await response.json();
       if (response.ok || response.status === 207) {
         this.bulkImportResult = data;
-        await this.loadItems(true);
+        await this.loadCarousels();
         this.showNotification(`Créés: ${data.created.length} / Erreurs: ${data.errors.length}`);
       } else { this.showNotification(data.error || 'Erreur import', 'error'); }
     } catch (error) { this.showNotification('Erreur réseau import', 'error'); }
