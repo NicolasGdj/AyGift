@@ -41,7 +41,8 @@ createApp({
       itemsLimit: 20,
       loadingMore: false,
       hasMore: true,
-      debounceTimeout: null
+      debounceTimeout: null,
+      notifications: []
     };
   },
   watch: {
@@ -204,6 +205,19 @@ createApp({
         this.selectCategory(category.id);
       }
     },
+    addNewItem() {
+      this.itemForm = { 
+        name: '', 
+        description: '', 
+        image: '',
+        category_id: null, 
+        price: '', 
+        link: '', 
+        owned: false 
+      };
+      this.editingItem = null;
+      this.showItemForm = true;
+    },
     showItemDetail(item) {
       this.selectedItem = item;
     },
@@ -261,10 +275,14 @@ createApp({
         
         if (response.ok) {
           await this.loadInitialData();
+          this.showNotification(this.editingCategory ? 'Catégorie modifiée avec succès' : 'Catégorie ajoutée avec succès');
           this.closeCategoryForm();
+        } else {
+          this.showNotification('Erreur lors de la sauvegarde de la catégorie', 'error');
         }
       } catch (error) {
         console.error('Error saving category:', error);
+        this.showNotification('Erreur lors de la sauvegarde de la catégorie', 'error');
       }
     },
     closeCategoryForm() {
@@ -294,13 +312,17 @@ createApp({
         });
         if (response.ok) {
           await this.loadItems(true);
+          this.showNotification('Intérêt renouvelé avec succès');
           this.selectedItem = null;
+        } else {
+          this.showNotification('Erreur lors du renouvellement', 'error');
         }
       } catch (error) {
         console.error('Error renewing interest:', error);
+        this.showNotification('Erreur lors du renouvellement', 'error');
       }
     },
-    async saveItem() {
+    async saveItem(action = 'add') {
       try {
         const method = this.editingItem ? 'PUT' : 'POST';
         const url = this.editingItem 
@@ -320,10 +342,28 @@ createApp({
         
         if (response.ok) {
           await this.loadItems(true);
-          this.closeItemForm();
+          this.showNotification(this.editingItem ? 'Article modifié avec succès' : 'Article ajouté avec succès');
+          
+          if (action === 'add' || this.editingItem) {
+            this.closeItemForm();
+          } else if (action === 'create') {
+            this.editingItem = null;
+            this.itemForm = { 
+              name: '', 
+              description: '', 
+              image: '',
+              category_id: null, 
+              price: '', 
+              link: '', 
+              owned: false 
+            };
+          }
+        } else {
+          this.showNotification('Erreur lors de la sauvegarde', 'error');
         }
       } catch (error) {
         console.error('Error saving item:', error);
+        this.showNotification('Erreur lors de la sauvegarde', 'error');
       }
     },
     closeItemForm() {
@@ -345,10 +385,13 @@ createApp({
           const response = await fetch('/api/bookings', { method: 'DELETE' });
           if (response.ok) {
             await this.loadInitialData();
-            alert('Tous les intérêts ont été réinitialisés.');
+            this.showNotification('Tous les intérêts ont été réinitialisés');
+          } else {
+            this.showNotification('Erreur lors de la réinitialisation', 'error');
           }
         } catch (error) {
           console.error('Error resetting bookings:', error);
+          this.showNotification('Erreur lors de la réinitialisation', 'error');
         }
       }
     },
@@ -407,6 +450,13 @@ createApp({
         if (type === 'wishlist') this.prevWishlist(); else this.prevOwned();
       }
       this.touchStartX = null;
+    },
+    showNotification(message, type = 'success') {
+      const id = Date.now();
+      this.notifications.push({ id, message, type });
+      setTimeout(() => {
+        this.notifications = this.notifications.filter(n => n.id !== id);
+      }, 3000);
     }
   },
   mounted() {

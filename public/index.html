@@ -92,6 +92,7 @@
       <!-- Admin Toolbar -->
       <div v-if="isAdmin" class="admin-toolbar">
         <button type="button" class="btn btn-success btn-small" @click="showCategoryForm = true">+ Nouvelle Catégorie</button>
+        <button type="button" class="btn btn-primary btn-small" @click="addNewItem">+ Nouvel Article</button>
         <button type="button" class="btn btn-danger btn-small" @click="resetAllBookings">Réinitialiser Intérêts</button>
       </div>
       
@@ -252,7 +253,9 @@
           </label>
         </div>
         <div class="modal-buttons">
-          <button type="button" class="btn btn-primary" @click="saveItem">Enregistrer</button>
+          <button type="button" class="btn btn-primary" @click="saveItem('add')">Ajouter</button>
+          <button type="button" class="btn btn-success" @click="saveItem('create')">Ajouter & crée</button>
+          <button type="button" class="btn btn-info" @click="saveItem('clone')">Ajouter & cloner</button>
           <button type="button" class="btn back-btn" @click="closeItemForm">Annuler</button>
         </div>
       </div>
@@ -291,6 +294,17 @@
             <button type="button" class="btn back-btn" @click="selectedItem = null">Fermer</button>
           </div>
         </div>
+      </div>
+    </div>
+    
+    <!-- Notifications -->
+    <div class="notifications">
+      <div 
+        v-for="notification in notifications" 
+        :key="notification.id"
+        :class="['notification', notification.type]"
+      >
+        {{ notification.message }}
       </div>
     </div>
   </div>
