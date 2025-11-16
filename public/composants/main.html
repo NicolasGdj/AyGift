@@ -57,6 +57,12 @@
               </button>
             </div>
           </div>
+          <div v-if="hasMore" class="item-card load-more-card" @click="loadItems(false)">
+            <div class="item-content">
+              <h3>Charger plus</h3>
+              <div v-if="loadingMore" class="loading-spinner"></div>
+            </div>
+          </div>
         </div>
         <button type="button" v-if="wishlistItems.length > 5" class="nav-arrow left" @click="scrollWishlist(-1)" aria-label="Précédent">‹</button>
         <button type="button" v-if="wishlistItems.length > 5" class="nav-arrow right" @click="scrollWishlist(1)" aria-label="Suivant">›</button>
@@ -76,6 +82,12 @@
                 </div>
                 <div class="item-date" v-if="item.last_interest_date">Nicolas a renouvelé son intérêt le {{ formatDate(item.last_interest_date) }}</div>
               </div>
+            </div>
+          </div>
+          <div v-if="hasMore" class="item-card load-more-card" @click="loadItems(false)">
+            <div class="item-content">
+              <h3>Charger plus</h3>
+              <div v-if="loadingMore" class="loading-spinner"></div>
             </div>
           </div>
         </div>
