@@ -1,5 +1,5 @@
 import express from 'express';
-import { Category } from '../dao/index.js';
+import { Category, Item } from '../dao/index.js';
 
 const router = express.Router();
 
@@ -57,6 +57,8 @@ router.delete('/:id', async (req, res) => {
     if (!category) {
       return res.status(404).json({ error: 'Category not found' });
     }
+    // Delete items belonging to the category first
+    await Item.destroy({ where: { category_id: category.id } });
     await category.destroy();
     res.status(204).send();
   } catch (error) {

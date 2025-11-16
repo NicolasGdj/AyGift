@@ -82,6 +82,7 @@
       <div class="detail-actions">
         <button type="button" tabindex="-1" v-if="!isAdmin" class="btn btn-success btn-small" :class="{ 'btn-primary': isUserInterested(selectedItem) }" @click.prevent="toggleInterest(selectedItem)" @touchstart.stop @touchend.stop>{{ isUserInterested(selectedItem) ? '✓ Intéressé' : 'Ça m\'intéresse' }}</button>
         <button type="button" v-if="isAdmin" class="btn btn-primary btn-small" @click="editItem(selectedItem); selectedItem = null">✏️ Modifier</button>
+        <button type="button" v-if="isAdmin" class="btn btn-danger btn-small" @click="deleteItem(selectedItem)">🗑 Supprimer</button>
         <button type="button" v-if="isAdmin" class="btn btn-success btn-small" @click="renewInterest(selectedItem)">🔄 Renouveler l'intérêt</button>
         <button type="button" v-if="isAdmin && !selectedItem.owned" class="btn btn-secondary btn-small" @click="markOwned(selectedItem)">✔ Marquer possédé</button>
         <button type="button" class="btn back-btn" @click="selectedItem = null">Fermer</button>

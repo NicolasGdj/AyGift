@@ -55,12 +55,32 @@ export const dataMethods = {
     this.loadItems(true);
   },
   handleCategoryClick(category) {
-    if (this.isAdmin) {
-      this.itemForm = { name: '', description: '', image: '', category_id: category.id, price: '', link: '', owned: false };
-      this.editingItem = null;
-      this.showItemForm = true;
-    } else {
-      this.selectCategory(category.id);
+    this.selectCategory(category.id);
+  },
+  addItemInCategory(category) {
+    this.itemForm = { name: '', description: '', image: '', category_id: category.id, price: '', link: '', owned: false };
+    this.editingItem = null;
+    this.showItemForm = true;
+    this.openCategoryMenuId = null;
+  },
+  async deleteCategory(category) {
+    if (!confirm(`Supprimer la catégorie "${category.name}" et tous ses articles ?`)) return;
+    try {
+      const res = await fetch(`/api/categories/${category.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        this.categories = this.categories.filter(c => c.id !== category.id);
+        this.items = this.items.filter(i => i.category_id !== category.id);
+        if (this.selectedCategory === category.id) {
+          this.selectedCategory = null;
+        }
+        this.showNotification('Catégorie supprimée');
+        this.openCategoryMenuId = null;
+      } else {
+        this.showNotification('Erreur suppression catégorie', 'error');
+      }
+    } catch (e) {
+      console.error(e);
+      this.showNotification('Erreur suppression catégorie', 'error');
     }
   },
   addNewItem() {

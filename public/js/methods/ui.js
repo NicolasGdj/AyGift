@@ -72,4 +72,24 @@ export const uiMethods = {
   },
   toggleActionDropdown() { this.showActionDropdown = !this.showActionDropdown; },
   selectLastItemAction(action) { this.lastItemAction = action; this.showActionDropdown = false; }
+  ,toggleCategoryMenu(category, event) {
+    if (this.openCategoryMenuId === category.id) {
+      this.openCategoryMenuId = null;
+    } else {
+      this.openCategoryMenuId = category.id;
+      // Position menu below the button
+      this.$nextTick(() => {
+        const menu = document.querySelector('.category-actions-menu');
+        if (menu && event && event.target) {
+          const btn = event.target.closest('.category-btn');
+          if (btn) {
+            const rect = btn.getBoundingClientRect();
+            menu.style.top = `${rect.bottom + window.scrollY}px`;
+            menu.style.left = `${rect.left + window.scrollX}px`;
+          }
+        }
+      });
+    }
+  }
+  ,closeCategoryMenus() { this.openCategoryMenuId = null; }
 };

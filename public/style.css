@@ -568,10 +568,63 @@ body {
   display: flex;
   gap: 1rem;
   overflow-x: auto;
+  overflow-y: visible;
   padding: 1rem 0;
   margin-bottom: 2rem;
   scrollbar-width: thin;
 }
+.category-item { 
+  position: relative; 
+  display: flex; 
+  align-items: center;
+}
+.category-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.category-btn > span:first-child {
+  flex: 1;
+}
+.category-actions-trigger {
+  opacity: 0.7;
+  padding: 0 0.3rem;
+  cursor: pointer;
+  font-weight: bold;
+  transition: opacity 0.2s;
+}
+.category-actions-trigger:hover {
+  opacity: 1;
+}
+.category-actions-menu {
+  position: fixed;
+  background: rgba(255,255,255,0.98);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 12px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 140px;
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  margin-top: 0.5rem;
+}
+.category-actions-menu button {
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color:#1e293b;
+}
+.category-actions-menu button:hover { background: rgba(99,102,241,0.12); }
+.category-actions-menu button.danger { color:#dc2626; }
+.category-actions-menu button.danger:hover { background: rgba(220,38,38,0.12); }
 
 .category-menu::-webkit-scrollbar {
   height: 8px;

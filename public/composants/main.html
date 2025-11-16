@@ -30,8 +30,19 @@
     <button type="button" class="btn btn-danger btn-small" @click="resetAllBookings">Réinitialiser Intérêts</button>
   </div>
   <div class="category-menu">
-    <button type="button" class="category-btn" :class="{ active: selectedCategory === null }" @click="selectCategory(null)">Toutes</button>
-    <button type="button" v-for="cat in categories" :key="cat.id" class="category-btn" :class="{ active: selectedCategory === cat.id }" @click="handleCategoryClick(cat)">{{ cat.name }}</button>
+    <div class="category-item">
+      <button type="button" class="category-btn" :class="{ active: selectedCategory === null }" @click="selectCategory(null)">Toutes</button>
+    </div>
+    <div class="category-item" v-for="cat in categories" :key="cat.id">
+      <button type="button" class="category-btn" :class="{ active: selectedCategory === cat.id }">
+        <span @click="handleCategoryClick(cat)">{{ cat.name }}</span>
+        <span v-if="isAdmin" class="category-actions-trigger" @click.stop="toggleCategoryMenu(cat, $event)">⚙️</span>
+      </button>
+      <div v-if="isAdmin && openCategoryMenuId === cat.id" class="category-actions-menu">
+        <button type="button" @click="addItemInCategory(cat)">+ Article</button>
+        <button type="button" @click="deleteCategory(cat)" class="danger">Supprimer</button>
+      </div>
+    </div>
   </div>
   <div v-if="loading" class="loading">Chargement...</div>
   <div v-else>

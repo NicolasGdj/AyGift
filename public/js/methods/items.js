@@ -67,4 +67,21 @@ export const itemMethods = {
       } catch (error) { console.error('Error resetting bookings:', error); this.showNotification('Erreur lors de la réinitialisation', 'error'); }
     }
   }
+  ,async deleteItem(item) {
+    if (!confirm(`Supprimer l'article "${item.name}" ?`)) return;
+    try {
+      const res = await fetch(`/api/items/${item.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        this.items = this.items.filter(i => i.id !== item.id);
+        this.bookings = this.bookings.filter(b => b.item_id !== item.id);
+        if (this.selectedItem && this.selectedItem.id === item.id) this.selectedItem = null;
+        this.showNotification('Article supprimé');
+      } else {
+        this.showNotification('Erreur suppression article', 'error');
+      }
+    } catch (e) {
+      console.error(e);
+      this.showNotification('Erreur suppression article', 'error');
+    }
+  }
 };

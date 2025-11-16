@@ -64,6 +64,7 @@ createApp({
       showBulkImport: false,
       bulkJson: '',
       bulkImportResult: null
+      ,openCategoryMenuId: null
     };
   },
   watch: {
@@ -93,6 +94,9 @@ createApp({
         });
       });
     }
-    document.addEventListener('click', (e) => { if (!e.target.closest('.dropdown-container')) { this.showActionDropdown = false; } });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.dropdown-container')) { this.showActionDropdown = false; }
+      if (!e.target.closest('.category-item')) { this.openCategoryMenuId = null; }
+    });
   }
 }).mount('#app');
