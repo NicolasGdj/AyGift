@@ -754,11 +754,13 @@ body {
     overflow-x: auto;
     justify-content: flex-start;
     padding: 1rem;
-    scroll-padding: 0 50%;
+    scroll-padding: 0 15vw;
+    gap: 2rem;
   }
   .item-card {
-    flex: 0 0 calc(100vw - 2rem);
-    max-width: calc(100vw - 2rem);
+    flex: 0 0 70vw;
+    max-width: 70vw;
+    scroll-snap-align: center;
   }
 }
 
@@ -776,7 +778,7 @@ body {
   border-radius: 20px;
   padding: 0;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  scroll-snap-align: start;
+  scroll-snap-align: none;
   position: relative;
   overflow: hidden;
   display: flex;
