@@ -1,62 +1,40 @@
 import express from 'express';
-import { ItemBook, Item } from '../dao/index.js';
+import { ItemBook } from '../dao/index.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
 
-// GET all bookings
-router.get('/', async (req, res) => {
-  try {
-    const bookings = await ItemBook.findAll({
-      include: [{ model: Item, as: 'item' }]
-    });
-    res.json(bookings);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// GET bookings for specific item
-router.get('/item/:itemId', async (req, res) => {
-  try {
-    const bookings = await ItemBook.findAll({
-      where: { item_id: req.params.itemId },
-      include: [{ model: Item, as: 'item' }]
-    });
-    res.json(bookings);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// GET bookings for specific user
-router.get('/user/:user', async (req, res) => {
-  try {
-    const bookings = await ItemBook.findAll({
-      where: { user: req.params.user },
-      include: [{ model: Item, as: 'item' }]
-    });
-    res.json(bookings);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// POST new booking
+// POST new booking (toggle: add if not exists, remove if exists)
 router.post('/', async (req, res) => {
   try {
-    const booking = await ItemBook.create(req.body);
-    res.status(201).json(booking);
+    const { item_id, user } = req.body;
+    
+    if (!item_id || !user) {
+      return res.status(400).json({ error: 'item_id and user are required' });
+    }
+    
+    const existing = await ItemBook.findOne({
+      where: { item_id, user }
+    });
+    
+    if (existing) {
+      await existing.destroy();
+      res.json({ success: true, action: 'removed', booking: null });
+    } else {
+      const booking = await ItemBook.create({ item_id, user, date: new Date() });
+      res.status(201).json({ success: true, action: 'added', booking });
+    }
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 });
 
 // DELETE booking
-router.delete('/:itemId/:user/:date', async (req, res) => {
+router.delete('/:itemId/:user', async (req, res) => {
   try {
-    const { itemId, user, date } = req.params;
+    const { itemId, user } = req.params;
     const booking = await ItemBook.findOne({
-      where: { item_id: itemId, user, date }
+      where: { item_id: itemId, user }
     });
     if (!booking) {
       return res.status(404).json({ error: 'Booking not found' });
@@ -69,7 +47,7 @@ router.delete('/:itemId/:user/:date', async (req, res) => {
 });
 
 // DELETE all bookings (admin only)
-router.delete('/', async (req, res) => {
+router.delete('/', authenticateToken, async (req, res) => {
   try {
     await ItemBook.destroy({ where: {}, truncate: true });
     res.json({ success: true, message: 'All bookings reset' });

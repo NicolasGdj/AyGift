@@ -1,10 +1,12 @@
 import express from 'express';
 import { Op } from 'sequelize';
+import sequelize from '../dao/db.js';
 import { Item, Category, ItemBook } from '../dao/index.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { promises as fs } from 'fs';
 import { randomUUID } from 'crypto';
+import { authenticateToken } from '../middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -55,7 +57,7 @@ const router = express.Router();
 // GET all items with pagination and filters
 router.get('/', async (req, res) => {
   try {
-    const { offset = 0, limit = 20, category_id, search, priceMin, priceMax, owned } = req.query;
+    const { offset = 0, limit = 20, category_id, search, priceMin, priceMax, owned, user } = req.query;
     
     let where = {};
     
@@ -82,10 +84,20 @@ router.get('/', async (req, res) => {
     
     const items = await Item.findAll({
       where,
-      include: [{ model: Category, as: 'category' }],
+      attributes: {
+        include: [
+          [sequelize.fn('COUNT', sequelize.col('bookings.item_id')), 'booking_count'],
+          [sequelize.literal(`(SELECT COUNT(*) FROM item_books WHERE item_books.item_id = Item.id AND item_books.user = ${user ? sequelize.escape(user) : 'NULL'})`), 'user_interested']
+        ]
+      },
+      include: [
+        { model: ItemBook, as: 'bookings', attributes: [] }
+      ],
+      group: ['Item.id'],
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['last_interest_date', 'DESC']]
+      order: [['last_interest_date', 'DESC']],
+      subQuery: false
     });
     
     res.json(items);
@@ -97,8 +109,18 @@ router.get('/', async (req, res) => {
 // GET single item
 router.get('/:id', async (req, res) => {
   try {
+    const { user } = req.query;
     const item = await Item.findByPk(req.params.id, {
-      include: [{ model: Category, as: 'category' }]
+      attributes: {
+        include: [
+          [sequelize.fn('COUNT', sequelize.col('bookings.item_id')), 'booking_count'],
+          [sequelize.literal(`(SELECT COUNT(*) FROM item_books WHERE item_books.item_id = Item.id AND item_books.user = ${user ? sequelize.escape(user) : 'NULL'})`), 'user_interested']
+        ]
+      },
+      include: [
+        { model: ItemBook, as: 'bookings', attributes: [] }
+      ],
+      group: ['Item.id']
     });
     if (!item) {
       return res.status(404).json({ error: 'Item not found' });
@@ -110,7 +132,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST new item
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const body = { ...req.body };
     if (body.image) {
@@ -125,7 +147,7 @@ router.post('/', async (req, res) => {
 });
 
 // BULK create items (accepts single object or array)
-router.post('/bulk', async (req, res) => {
+router.post('/bulk', authenticateToken, async (req, res) => {
   try {
     const payload = req.body;
     const itemsInput = Array.isArray(payload) ? payload : [payload];
@@ -185,7 +207,7 @@ router.post('/bulk', async (req, res) => {
 });
 
 // PUT update item
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const item = await Item.findByPk(req.params.id);
     if (!item) {
@@ -199,7 +221,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE item
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const item = await Item.findByPk(req.params.id);
     if (!item) {

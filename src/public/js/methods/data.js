@@ -2,12 +2,8 @@ export const dataMethods = {
   async loadInitialData(showLoading = true) {
     if (showLoading) this.loading = true;
     try {
-      const [catRes, bookingsRes] = await Promise.all([
-        fetch('/api/categories'),
-        fetch('/api/bookings')
-      ]);
+      const catRes = await fetch('/api/categories');
       this.categories = await catRes.json();
-      this.bookings = await bookingsRes.json();
       await this.loadCarousels();
       await this.loadItems(true);
     } catch (error) {
@@ -22,6 +18,7 @@ export const dataMethods = {
         limit: 10,
         offset: 0
       });
+      if (this.userName) baseParams.append('user', this.userName);
       if (this.selectedCategory) baseParams.append('category_id', this.selectedCategory);
       if (this.searchQuery.trim()) baseParams.append('search', this.searchQuery);
       if (this.priceMin) baseParams.append('priceMin', this.priceMin);
@@ -51,6 +48,7 @@ export const dataMethods = {
         limit: 10,
         owned: false
       });
+      if (this.userName) params.append('user', this.userName);
       if (this.selectedCategory) params.append('category_id', this.selectedCategory);
       if (this.searchQuery.trim()) params.append('search', this.searchQuery);
       if (this.priceMin) params.append('priceMin', this.priceMin);
@@ -70,6 +68,7 @@ export const dataMethods = {
         limit: 10,
         owned: true
       });
+      if (this.userName) params.append('user', this.userName);
       if (this.selectedCategory) params.append('category_id', this.selectedCategory);
       if (this.searchQuery.trim()) params.append('search', this.searchQuery);
       if (this.priceMin) params.append('priceMin', this.priceMin);
@@ -94,6 +93,7 @@ export const dataMethods = {
       const params = new URLSearchParams({
         offset: this.itemsOffset,
         limit: this.itemsLimit,
+        ...(this.userName && { user: this.userName }),
         ...(this.selectedCategory && { category_id: this.selectedCategory }),
         ...(this.searchQuery.trim() && { search: this.searchQuery }),
         ...(this.priceMin && { priceMin: this.priceMin }),
@@ -133,7 +133,7 @@ export const dataMethods = {
   async deleteCategory(category) {
     if (!confirm(`Supprimer la catégorie "${category.name}" et tous ses articles ?`)) return;
     try {
-      const res = await fetch(`/api/categories/${category.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/categories/${category.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${this.token}` } });
       if (res.ok) {
         this.categories = this.categories.filter(c => c.id !== category.id);
         this.items = this.items.filter(i => i.category_id !== category.id);

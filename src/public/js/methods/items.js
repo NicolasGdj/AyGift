@@ -1,23 +1,44 @@
+const getAuthHeaders = (token) => ({
+  'Content-Type': 'application/json',
+  ...(token && { 'Authorization': `Bearer ${token}` })
+});
+
 export const itemMethods = {
   showItemDetail(item) { this.selectedItem = item; },
   formatDate(dateString) { const date = new Date(dateString); return date.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }); },
-  hasBooking(item) { return this.bookings.some(b => b.item_id === item.id); },
-  getInterestCount(item) { return this.bookings.filter(b => b.item_id === item.id).length; },
-  isUserInterested(item) { return this.bookings.some(b => b.item_id === item.id && b.user === this.userName); },
+  hasBooking(item) { return item.booking_count > 0; },
+  getInterestCount(item) { return item.booking_count || 0; },
+  isUserInterested(item) { return item.user_interested || false; },
   async toggleInterest(item) {
     try {
-      if (this.isUserInterested(item)) {
-        const booking = this.bookings.find(b => b.item_id === item.id && b.user === this.userName);
-        if (booking) {
-          await fetch(`/api/bookings/${item.id}/${this.userName}/${encodeURIComponent(booking.date)}`, { method: 'DELETE' });
-          this.bookings = this.bookings.filter(b => !(b.item_id === item.id && b.user === this.userName));
+      const response = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: item.id, user: this.userName })
+      });
+      const result = await response.json();
+      
+      // Fonction pour mettre à jour un item
+      const updateItemBookings = (itemToUpdate) => {
+        if (itemToUpdate.id === item.id) {
+          if (result.action === 'added') {
+            itemToUpdate.booking_count = (itemToUpdate.booking_count || 0) + 1;
+            itemToUpdate.user_interested = true;
+          } else if (result.action === 'removed') {
+            itemToUpdate.booking_count = Math.max(0, (itemToUpdate.booking_count || 0) - 1);
+            itemToUpdate.user_interested = false;
+          }
         }
-      } else {
-        await fetch('/api/bookings', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ item_id: item.id, user: this.userName, date: new Date().toISOString() })
-        });
-        this.bookings.push({ item_id: item.id, user: this.userName, date: new Date().toISOString() });
+      };
+      
+      // Mettre à jour dans tous les tableaux
+      this.wishlistItems.forEach(updateItemBookings);
+      this.ownedItems.forEach(updateItemBookings);
+      this.items.forEach(updateItemBookings);
+      
+      // Mettre à jour selectedItem si c'est celui-ci
+      if (this.selectedItem && this.selectedItem.id === item.id) {
+        updateItemBookings(this.selectedItem);
       }
     } catch (error) { console.error('Error toggling interest:', error); }
   },
@@ -28,13 +49,13 @@ export const itemMethods = {
   },
   async renewInterest(item) {
     try {
-      const response = await fetch(`/api/items/${item.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ last_interest_date: new Date().toISOString() }) });
+      const response = await fetch(`/api/items/${item.id}`, { method: 'PUT', headers: getAuthHeaders(this.token), body: JSON.stringify({ last_interest_date: new Date().toISOString() }) });
       if (response.ok) { await this.loadCarousels(); this.showNotification('Intérêt renouvelé avec succès'); this.selectedItem = null; } else { this.showNotification('Erreur lors du renouvellement', 'error'); }
     } catch (error) { console.error('Error renewing interest:', error); this.showNotification('Erreur lors du renouvellement', 'error'); }
   },
   async markOwned(item) {
     try {
-      const response = await fetch(`/api/items/${item.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ owned: true }) });
+      const response = await fetch(`/api/items/${item.id}`, { method: 'PUT', headers: getAuthHeaders(this.token), body: JSON.stringify({ owned: true }) });
       if (response.ok) { await this.loadCarousels(); this.showNotification('Marqué comme possédé'); this.selectedItem = null; } else { this.showNotification('Erreur lors de la mise à jour', 'error'); }
     } catch (error) { console.error('Error marking owned:', error); this.showNotification('Erreur lors de la mise à jour', 'error'); }
   },
@@ -43,7 +64,7 @@ export const itemMethods = {
       const method = this.editingItem ? 'PUT' : 'POST';
       const url = this.editingItem ? `/api/items/${this.editingItem.id}` : '/api/items';
       const payload = { ...this.itemForm, last_interest_date: new Date().toISOString() };
-      const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const response = await fetch(url, { method, headers: getAuthHeaders(this.token), body: JSON.stringify(payload) });
       if (response.ok) {
         await this.loadCarousels();
         this.showNotification(this.editingItem ? 'Article modifié avec succès' : 'Article ajouté avec succès');
@@ -61,7 +82,7 @@ export const itemMethods = {
   async resetAllBookings() {
     if (confirm('Êtes-vous sûr de vouloir réinitialiser tous les intérêts ?')) {
       try {
-        const response = await fetch('/api/bookings', { method: 'DELETE' });
+        const response = await fetch('/api/bookings', { method: 'DELETE', headers: getAuthHeaders(this.token) });
         if (response.ok) { await this.loadInitialData(); this.showNotification('Tous les intérêts ont été réinitialisés'); }
         else { this.showNotification('Erreur lors de la réinitialisation', 'error'); }
       } catch (error) { console.error('Error resetting bookings:', error); this.showNotification('Erreur lors de la réinitialisation', 'error'); }
@@ -70,10 +91,9 @@ export const itemMethods = {
   ,async deleteItem(item) {
     if (!confirm(`Supprimer l'article "${item.name}" ?`)) return;
     try {
-      const res = await fetch(`/api/items/${item.id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/items/${item.id}`, { method: 'DELETE', headers: getAuthHeaders(this.token) });
       if (res.ok) {
         this.items = this.items.filter(i => i.id !== item.id);
-        this.bookings = this.bookings.filter(b => b.item_id !== item.id);
         if (this.selectedItem && this.selectedItem.id === item.id) this.selectedItem = null;
         await this.loadCarousels();
         this.showNotification('Article supprimé');

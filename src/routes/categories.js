@@ -3,6 +3,7 @@ import { Category, Item, ItemBook } from '../dao/index.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { promises as fs } from 'fs';
+import { authenticateToken } from '../middleware/auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,7 +44,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST new category
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
   try {
     const category = await Category.create(req.body);
     res.status(201).json(category);
@@ -53,7 +54,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT update category
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, async (req, res) => {
   try {
     const category = await Category.findByPk(req.params.id);
     if (!category) {
@@ -67,7 +68,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE category
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, async (req, res) => {
   try {
     const category = await Category.findByPk(req.params.id);
     if (!category) {

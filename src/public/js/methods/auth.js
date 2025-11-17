@@ -46,6 +46,5 @@ export const authMethods = {
     this.password = '';
     this.categories = [];
     this.items = [];
-    this.bookings = [];
   }
 };

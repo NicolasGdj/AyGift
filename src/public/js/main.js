@@ -33,7 +33,6 @@ createApp({
       token: null,
       categories: [],
       items: [],
-      bookings: [],
       wishlistItems: [],
       ownedItems: [],
       wishlistOffset: 10,

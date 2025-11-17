@@ -6,7 +6,9 @@ export const bulkMethods = {
     let parsed;
     try { parsed = JSON.parse(this.bulkJson); } catch (e) { this.showNotification('JSON invalide', 'error'); return; }
     try {
-      const response = await fetch('/api/items/bulk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(parsed) });
+      const headers = { 'Content-Type': 'application/json' };
+      if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+      const response = await fetch('/api/items/bulk', { method: 'POST', headers, body: JSON.stringify(parsed) });
       const data = await response.json();
       if (response.ok || response.status === 207) {
         this.bulkImportResult = data;
