@@ -49,6 +49,9 @@ body {
 
 @media (max-width: 768px) {
   .cloud { display: none; }
+  #loading {
+    background: white;
+  }
 }
 
 #app { position: relative; z-index: 10; }
@@ -535,6 +538,7 @@ body {
   transform: translateY(-50%);
   color: rgba(255, 255, 255, 0.8);
   font-size: 1.2rem;
+  z-index: 10;
 }
 
 /* Admin toolbar */

@@ -103,3 +103,5 @@ createApp({
     });
   }
 }).mount('#app');
+
+document.getElementById('loading').style.display = 'none';
