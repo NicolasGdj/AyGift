@@ -154,5 +154,36 @@ export const dataMethods = {
     this.itemForm = { name: '', description: '', image: '', category_id: null, price: '', link: '', owned: false };
     this.editingItem = null;
     this.showItemForm = true;
+  },
+  async saveCategory() {
+    try {
+      const method = this.editingCategory ? 'PUT' : 'POST';
+      const url = this.editingCategory ? `/api/categories/${this.editingCategory.id}` : '/api/categories';
+      const headers = { 'Content-Type': 'application/json' };
+      if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+      
+      const response = await fetch(url, {
+        method,
+        headers,
+        body: JSON.stringify(this.categoryForm)
+      });
+      
+      if (response.ok) {
+        const catRes = await fetch('/api/categories');
+        this.categories = await catRes.json();
+        this.showNotification(this.editingCategory ? 'Catégorie modifiée avec succès' : 'Catégorie ajoutée avec succès');
+        this.closeCategoryForm();
+      } else {
+        this.showNotification('Erreur lors de la sauvegarde', 'error');
+      }
+    } catch (error) {
+      console.error('Error saving category:', error);
+      this.showNotification('Erreur lors de la sauvegarde', 'error');
+    }
+  },
+  closeCategoryForm() {
+    this.showCategoryForm = false;
+    this.editingCategory = null;
+    this.categoryForm = { name: '', description: '' };
   }
 };
