@@ -29,6 +29,7 @@ createApp({
       password: '',
       guestName: '',
       userName: '',
+      owner: 'Owner',
       isAdmin: false,
       token: null,
       categories: [],
@@ -82,12 +83,21 @@ createApp({
     currentOwnedItem() { return this.ownedItems[0] || null; }
   },
   methods,
-  mounted() {
+  async mounted() {
+    // Load config
+    try {
+      const configRes = await fetch('/api/config');
+      const config = await configRes.json();
+      this.owner = config.owner;
+    } catch (e) {
+      console.error('Failed to load config:', e);
+    }
+    
     const token = localStorage.getItem('token');
     if (token) {
       this.token = token;
       this.isAdmin = true;
-      this.userName = 'Nicolas';
+      this.userName = this.owner;
       this.showWelcome = false;
       this.loadInitialData().then(() => {
         this.$nextTick(() => {

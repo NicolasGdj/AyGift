@@ -355,6 +355,13 @@ body {
   text-align: center;
 }
 
+.welcome-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
 .welcome-actions {
   display: flex;
   flex-direction: column;
@@ -363,7 +370,9 @@ body {
 }
 
 .welcome-actions.row {
+  display: flex;
   flex-direction: row;
+  gap: 1rem;
   margin-top: 1rem;
 }
 

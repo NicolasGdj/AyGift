@@ -1,6 +1,6 @@
 export const authMethods = {
   selectGuest() { this.welcomeStep = 'guest'; },
-  selectNicolas() { this.welcomeStep = 'nicolas'; },
+  selectOwner() { this.welcomeStep = 'owner'; },
   async login() {
     try {
       const response = await fetch('/api/auth/login', {
@@ -12,7 +12,7 @@ export const authMethods = {
       if (data.success) {
         this.token = data.token;
         this.isAdmin = true;
-        this.userName = 'Nicolas';
+        this.userName = this.owner;
         localStorage.setItem('token', data.token);
         this.showWelcome = false;
         this.loadInitialData();

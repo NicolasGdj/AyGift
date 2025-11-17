@@ -11,4 +11,11 @@ router.use('/categories', categoriesRouter);
 router.use('/items', itemsRouter);
 router.use('/bookings', itemBooksRouter);
 
+// Config endpoint
+router.get('/config', (req, res) => {
+  res.json({
+    owner: process.env.OWNER || 'Owner'
+  });
+});
+
 export default router;

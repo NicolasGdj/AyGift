@@ -94,7 +94,7 @@ router.post('/login', async (req, res) => {
     }
     
     const token = jwt.sign(
-      { user: 'nicolas', role: 'admin' },
+      { user: process.env.OWNER || 'owner', role: 'admin' },
       JWT_SECRET,
       { expiresIn: '1d' }
     );

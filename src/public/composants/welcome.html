@@ -2,13 +2,13 @@
   <div class="welcome-content">
     <div v-if="welcomeStep === 'choice'">
       <h1 class="welcome-title">AyGift</h1>
-      <p>Bienvenue sur la page AyGift de Nicolas, ici vous pouvez trouver des idées cadeaux personnalisées.</p>
-      <div class="welcome-actions">
+      <p>Bienvenue sur la page AyGift de {{ owner }}, ici vous pouvez trouver des idées cadeaux personnalisées.</p>
+      <div class="welcome-buttons">
         <button type="button" class="welcome-btn primary" @click="selectGuest">Je cherche une idée</button>
-        <button type="button" class="welcome-btn secondary" @click="selectNicolas">Je suis Nicolas</button>
+        <button type="button" class="welcome-btn secondary" @click="selectOwner">Je suis {{ owner }}</button>
       </div>
     </div>
-    <div v-if="welcomeStep === 'nicolas'">
+    <div v-if="welcomeStep === 'owner'">
       <h1 class="welcome-title">Connexion</h1>
       <div class="welcome-field">
         <input type="password" v-model="password" @keyup.enter="login" placeholder="Mot de passe" class="welcome-input">
@@ -20,7 +20,7 @@
     </div>
     <div v-if="welcomeStep === 'guest'">
       <h1 class="welcome-title">Entrez votre nom</h1>
-      <p>Rassurez-vous, Nicolas ne verra pas vos choix.</p>
+      <p>Rassurez-vous, {{ owner }} ne verra pas vos choix.</p>
       <div class="welcome-field">
         <input type="text" v-model="guestName" @keyup.enter="setGuestName" placeholder="Entrez votre nom" class="welcome-input">
       </div>
