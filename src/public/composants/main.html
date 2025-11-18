@@ -62,9 +62,9 @@
               </div>
             </div>
             <div class="item-card-bottom" v-if="!isAdmin">
-              <button type="button" tabindex="-1" class="interest-button" :class="{ interested: isUserInterested(item) }" @click.prevent.stop="toggleInterest(item)" @touchstart.stop @touchend.stop>
-                {{ isUserInterested(item) ? '✓ Intéressé' : 'Ça m\'intéresse' }}
-                <span class="interest-count">({{ getInterestCount(item) }})</span>
+              <button type="button" tabindex="-1" class="interest-button" :class="{ 'user-interested': isUserInterested(item), 'others-interested': !isUserInterested(item) && getInterestCount(item) > 0, 'no-interest': getInterestCount(item) === 0 }" @click.prevent.stop="toggleInterest(item)" @touchstart.stop @touchend.stop :title="getInterestCount(item) > 0 ? 'Intéressés (' + getInterestCount(item) + ') : ' + getInterestedList(item) : ''">
+                {{ isUserInterested(item) ? '✓ Intéressé' : getInterestCount(item) > 0 ? 'Intéressé' : 'Ça m\'intéresse' }}
+                <span class="interest-count" v-if="getInterestCount(item) > 0">({{ getInterestCount(item) }})</span>
               </button>
             </div>
           </div>

@@ -941,13 +941,39 @@ body {
   font-size: 0.95rem;
 }
 
-.interest-button:hover {
+/* Vert - Personne intéressé */
+.interest-button.no-interest {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.interest-button.no-interest:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
 }
 
+/* Jaune - D'autres personnes intéressées */
+.interest-button.others-interested {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+}
+
+.interest-button.others-interested:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(251, 191, 36, 0.4);
+}
+
+/* Orange - Je suis intéressé */
+.interest-button.user-interested {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+}
+
+.interest-button.user-interested:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(249, 115, 22, 0.4);
+}
+
+/* Ancien style pour compatibilité */
 .interest-button.interested {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
 }
 
 .interest-count {

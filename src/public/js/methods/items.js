@@ -6,9 +6,14 @@ const getAuthHeaders = (token) => ({
 export const itemMethods = {
   showItemDetail(item) { this.selectedItem = item; },
   formatDate(dateString) { const date = new Date(dateString); return date.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }); },
-  hasBooking(item) { return item.booking_count > 0; },
-  getInterestCount(item) { return item.booking_count || 0; },
-  isUserInterested(item) { return item.user_interested || false; },
+  formatShortDate(dateString) { const date = new Date(dateString); return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }); },
+  hasBooking(item) { return item.bookings && item.bookings.length > 0; },
+  getInterestCount(item) { return item.bookings ? item.bookings.length : 0; },
+  isUserInterested(item) { return item.bookings && item.bookings.some(b => b.user === this.userName); },
+  getInterestedList(item) {
+    if (!item.bookings || item.bookings.length === 0) return '';
+    return item.bookings.map(b => `${b.user} [le ${this.formatShortDate(b.date)}]`).join(', ');
+  },
   async toggleInterest(item) {
     try {
       const response = await fetch('/api/bookings', {
@@ -21,12 +26,12 @@ export const itemMethods = {
       // Fonction pour mettre à jour un item
       const updateItemBookings = (itemToUpdate) => {
         if (itemToUpdate.id === item.id) {
+          if (!itemToUpdate.bookings) itemToUpdate.bookings = [];
+          
           if (result.action === 'added') {
-            itemToUpdate.booking_count = (itemToUpdate.booking_count || 0) + 1;
-            itemToUpdate.user_interested = true;
+            itemToUpdate.bookings.push(result.booking);
           } else if (result.action === 'removed') {
-            itemToUpdate.booking_count = Math.max(0, (itemToUpdate.booking_count || 0) - 1);
-            itemToUpdate.user_interested = false;
+            itemToUpdate.bookings = itemToUpdate.bookings.filter(b => b.user !== this.userName);
           }
         }
       };

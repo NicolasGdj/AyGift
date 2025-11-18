@@ -84,23 +84,23 @@ router.get('/', async (req, res) => {
     
     const items = await Item.findAll({
       where,
-      attributes: {
-        include: [
-          [sequelize.fn('COUNT', sequelize.col('bookings.item_id')), 'booking_count'],
-          [sequelize.literal(`(SELECT COUNT(*) FROM item_books WHERE item_books.item_id = Item.id AND item_books.user = ${user ? sequelize.escape(user) : 'NULL'})`), 'user_interested']
-        ]
-      },
       include: [
-        { model: ItemBook, as: 'bookings', attributes: [] }
+        { model: ItemBook, as: 'bookings', attributes: ['user', 'date'] }
       ],
-      group: ['Item.id'],
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['last_interest_date', 'DESC']],
-      subQuery: false
+      order: [['last_interest_date', 'DESC']]
     });
     
-    res.json(items);
+    // Add computed fields
+    const itemsWithMeta = items.map(item => {
+      const itemData = item.toJSON();
+      itemData.booking_count = itemData.bookings ? itemData.bookings.length : 0;
+      itemData.user_interested = user && itemData.bookings ? itemData.bookings.some(b => b.user === user) : false;
+      return itemData;
+    });
+    
+    res.json(itemsWithMeta);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -111,21 +111,20 @@ router.get('/:id', async (req, res) => {
   try {
     const { user } = req.query;
     const item = await Item.findByPk(req.params.id, {
-      attributes: {
-        include: [
-          [sequelize.fn('COUNT', sequelize.col('bookings.item_id')), 'booking_count'],
-          [sequelize.literal(`(SELECT COUNT(*) FROM item_books WHERE item_books.item_id = Item.id AND item_books.user = ${user ? sequelize.escape(user) : 'NULL'})`), 'user_interested']
-        ]
-      },
       include: [
-        { model: ItemBook, as: 'bookings', attributes: [] }
-      ],
-      group: ['Item.id']
+        { model: ItemBook, as: 'bookings', attributes: ['user', 'date'] }
+      ]
     });
     if (!item) {
       return res.status(404).json({ error: 'Item not found' });
     }
-    res.json(item);
+    
+    // Add computed fields
+    const itemData = item.toJSON();
+    itemData.booking_count = itemData.bookings ? itemData.bookings.length : 0;
+    itemData.user_interested = user && itemData.bookings ? itemData.bookings.some(b => b.user === user) : false;
+    
+    res.json(itemData);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

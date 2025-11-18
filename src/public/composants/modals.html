@@ -73,7 +73,10 @@
         <h2 style="margin: 0;">{{ selectedItem.name }}</h2>
         <div class="item-price-badge" v-if="selectedItem.price">{{ selectedItem.price }}€</div>
       </div>
-      <div v-if="!isAdmin && getInterestCount(selectedItem) > 0" class="interest-counter">🎁 {{ getInterestCount(selectedItem) }} personne(s) intéressée(s)</div>
+      <div v-if="!isAdmin && getInterestCount(selectedItem) > 0" class="interest-counter">
+        🎁 Intéressés ({{ getInterestCount(selectedItem) }}) : {{ getInterestedList(selectedItem) }}.
+        <br><small style="font-size: 0.85em; opacity: 0.8;">Si vous changez d'avis merci de supprimer votre intéressement pour que d'autres personnes puissent profiter de l'idée !</small>
+      </div>
       <div class="item-date" v-if="selectedItem.last_interest_date">{{ owner }} a renouvelé son intérêt le {{ formatDate(selectedItem.last_interest_date) }}</div>
       <p v-if="selectedItem.description" style="margin: 1.5rem 0;">{{ selectedItem.description }}</p>
       <div class="detail-meta">
