@@ -1,4 +1,4 @@
-<div class="notifications">
+<div class="notifications" role="status" aria-live="polite">
   <div v-for="notification in notifications" :key="notification.id" :class="['notification', notification.type]">
     {{ notification.message }}
   </div>

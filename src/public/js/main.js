@@ -1,116 +1,199 @@
 import { authMethods } from './methods/auth.js';
-import { dataMethods } from './methods/data.js';
-import { itemMethods } from './methods/items.js';
+import { dataMethods, emptyPage } from './methods/data.js';
+import { formatPrice, itemMethods } from './methods/items.js';
 import { uiMethods } from './methods/ui.js';
 import { bulkMethods } from './methods/bulk.js';
+import { settingsMethods, orderedCategories } from './methods/settings.js';
+import { defaultSettings, maxFeaturedLimit, maxPreferenceRows } from './settings.js';
+import { imageMethods } from './methods/images.js';
+import { rouletteMethods } from './methods/roulette.js';
 
-const partials = ['welcome.html','main.html','modals.html','bulk.html','notifications.html'];
+const partials = ['welcome', 'main', 'admin', 'modals', 'bulk', 'notifications', 'gift-shelf', 'item-card'];
+const templates = await Promise.all(partials.map(async (name) => {
+  const response = await fetch(`composants/${name}.html`);
+  if (!response.ok) throw new Error(`Impossible de charger ${name}`);
+  return response.text();
+}));
+const app = document.getElementById('app');
+app.innerHTML = templates.slice(0, -2).join('');
 
-async function loadPartials() {
-  const appEl = document.getElementById('app');
-  for (const file of partials) {
-    const res = await fetch(`composants/${file}`);
-    const html = await res.text();
-    appEl.insertAdjacentHTML('beforeend', html);
-  }
-}
-
-await loadPartials();
-
-const { createApp } = Vue;
-
-const methods = { ...authMethods, ...dataMethods, ...itemMethods, ...uiMethods, ...bulkMethods };
-
-createApp({
+Vue.createApp({
   data() {
     return {
       showWelcome: true,
       welcomeStep: 'choice',
-      password: '',
+      loginPending: false,
+      loginError: '',
+      otpFieldType: CSS.supports('-webkit-text-security', 'disc') ? 'text' : 'password',
       guestName: '',
+      guestPending: false,
+      guestError: '',
       userName: '',
-      owner: 'Owner',
+      defaultOwner: 'Owner',
       isAdmin: false,
       token: null,
+      adminView: 'articles',
+      adminViews: { articles: 'Articles', owned: 'Déjà possédés', categories: 'Catégories', featured: 'Mise en avant', sizes: 'Mes tailles', avoid: 'Pas pour moi', welcome: 'Page de connexion', appearance: 'Apparence', preview: 'Aperçu invité' },
+      guestView: 'home',
+      guestToken: '',
+      filtersOpen: false,
+      settings: structuredClone(defaultSettings),
+      draft: structuredClone(defaultSettings),
+      savingSettings: false,
+      adminSettingsReady: false,
+      featuredLimitMax: maxFeaturedLimit,
+      preferenceLimit: maxPreferenceRows,
+      featuredItems: [],
+      recentItems: [],
+      featuredRequest: 0,
+      featuredChoices: {},
       categories: [],
-      items: [],
-      wishlistItems: [],
-      ownedItems: [],
-      wishlistOffset: 10,
-      ownedOffset: 10,
+      pages: { articles: emptyPage(), wishlist: emptyPage(), owned: emptyPage() },
+      catalogVersion: 0,
+      catalogTimer: null,
       selectedCategory: null,
       selectedItem: null,
+      itemReservations: [],
+      reservationLoading: false,
+      reservationError: false,
+      reservationRequest: 0,
+      pendingInterests: {},
       searchQuery: '',
-      priceMin: null,
-      priceMax: null,
-      loading: false,
+      priceMin: '',
+      priceMax: '',
+      rouletteItems: [],
+      rouletteTiles: [],
+      roulettePosition: 0,
+      rouletteVersion: 0,
+      rouletteAnimation: null,
+      rouletteResult: null,
+      rouletteLoading: false,
+      rouletteError: false,
+      rouletteSpinning: false,
+      rouletteOpening: false,
       showCategoryForm: false,
       showItemForm: false,
       editingCategory: null,
       editingItem: null,
       categoryForm: { name: '', description: '' },
       itemForm: { name: '', description: '', image: '', category_id: null, price: '', link: '', owned: false },
-      showPriceFilter: false,
-      itemsOffset: 0,
-      itemsLimit: 20,
-      loadingMore: false,
-      hasMore: true,
-      debounceTimeout: null,
+      itemSaving: false,
+      itemSaveError: '',
+      itemSavedNotice: '',
+      imageSource: null,
+      imageLoading: false,
+      imageError: '',
+      imageDragging: false,
+      imageZoom: 1,
+      imageX: 50,
+      imageY: 50,
+      imageRotate: 0,
+      imageRatio: 'original',
+      imageRequest: 0,
       notifications: [],
-      isDragging: false,
-      dragStartX: 0,
-      dragStartScroll: 0,
-      currentDraggingCarousel: null,
-      dragListenersAdded: false,
-      dragStarted: false,
-      lastItemAction: 'add',
-      showActionDropdown: false,
       showBulkImport: false,
       bulkJson: '',
       bulkImportResult: null
-      ,openCategoryMenuId: null
     };
   },
-  watch: {
-    searchQuery() { clearTimeout(this.debounceTimeout); this.debounceTimeout = setTimeout(() => { this.loadCarousels(); }, 500); },
-    priceMin() { clearTimeout(this.debounceTimeout); this.debounceTimeout = setTimeout(() => { this.loadCarousels(); }, 500); },
-    priceMax() { clearTimeout(this.debounceTimeout); this.debounceTimeout = setTimeout(() => { this.loadCarousels(); }, 500); },
-    selectedCategory() { this.loadCarousels(); }
-  },
   computed: {
-    filteredItems() { return this.items; },
-    currentWishlistItem() { return this.wishlistItems[0] || null; },
-    currentOwnedItem() { return this.ownedItems[0] || null; }
+    publicView() { return !this.isAdmin || this.adminView === 'preview'; },
+    guestViews() {
+      const links = [
+        { view: 'home', hash: '#cadeaux', label: 'Idées cadeaux' },
+        { view: 'owned', hash: '#possede', label: 'Déjà possédés' },
+        { view: 'sizes', hash: '#mes-tailles', label: 'Mes tailles' }
+      ];
+      if (this.settings.avoidEnabled) links.push({ view: 'avoid', hash: '#pas-pour-moi', label: 'Pas pour moi' });
+      if (this.settings.rouletteEnabled) links.push({ view: 'roulette', hash: '#roulette', label: 'Roulette' });
+      return links;
+    },
+    owner() { return this.settings.welcome.ownerName || this.defaultOwner; },
+    categoryList() { return orderedCategories(this.categories, this.settings.categoryOrder); },
+    categoryNames() { return Object.fromEntries(this.categories.map(category => [category.id, category.name])); },
+    draftCategories() { return orderedCategories(this.categories, this.draft.categoryOrder); },
+    activeFilters() {
+      return !!this.searchQuery.trim() || this.selectedCategory !== null || this.priceMin !== '' || this.priceMax !== '';
+    },
+    filterKey() { return JSON.stringify([this.searchQuery.trim(), this.selectedCategory, this.priceMin, this.priceMax]); },
+    homeShelves() { return this.guestView === 'home' && !this.activeFilters; },
+    guestShelfKeys() { return this.categoryList.map(category => `category-${category.id}`); },
+    guestResultKey() { return this.guestView === 'owned' ? 'owned' : 'wishlist'; },
+    settingsDirty() { return JSON.stringify(this.settings) !== JSON.stringify(this.draft); }
   },
-  methods,
+  watch: {
+    filterKey() { if (!this.showWelcome) this.queueCatalog(); }
+  },
+  methods: { ...authMethods, ...dataMethods, ...itemMethods, ...uiMethods, ...bulkMethods, ...settingsMethods, ...imageMethods, ...rouletteMethods },
   async mounted() {
-    // Load config
     try {
-      const configRes = await fetch('/api/config');
-      const config = await configRes.json();
-      this.owner = config.owner;
-    } catch (e) {
-      console.error('Failed to load config:', e);
+      await this.loadSettings();
+    } catch (error) {
+      this.showNotification('Les réglages du site sont indisponibles.', 'error');
     }
-    
-    const token = localStorage.getItem('token');
-    if (token) {
-      this.token = token;
-      this.isAdmin = true;
-      this.userName = this.owner;
-      this.showWelcome = false;
-      this.loadInitialData().then(() => {
-        this.$nextTick(() => {
-          const carousels = document.querySelectorAll('.carousel-section .carousel');
-          carousels.forEach(c => this.initDrag(c));
-        });
-      });
-    }
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.dropdown-container')) { this.showActionDropdown = false; }
-      if (!e.target.closest('.category-item')) { this.openCategoryMenuId = null; }
-    });
+    await this.restoreSession();
+    window.addEventListener('hashchange', this.syncGuestHash);
+    document.getElementById('loading').hidden = true;
   }
-}).mount('#app');
-
-document.getElementById('loading').style.display = 'none';
+})
+.component('gift-shelf', {
+  props: ['items', 'categories', 'preview', 'pending', 'layout', 'ranked', 'carousel', 'label'],
+  emits: ['details', 'interest'],
+  data() { return { canScrollBack: false, canScrollForward: false }; },
+  watch: { 'items.length'() { this.$nextTick(this.updateScrollControls); } },
+  mounted() {
+    if (this.carousel) {
+      this.resizeObserver = new ResizeObserver(this.updateScrollControls);
+      this.resizeObserver.observe(this.$refs.track);
+    }
+  },
+  beforeUnmount() { this.resizeObserver?.disconnect(); },
+  methods: {
+    updateScrollControls() {
+      const track = this.$refs.track;
+      if (!this.carousel || !track) return;
+      this.canScrollBack = track.scrollLeft > 1;
+      this.canScrollForward = track.scrollLeft + track.clientWidth < track.scrollWidth - 1;
+    },
+    scroll(direction) {
+      const track = this.$refs.track;
+      track.scrollBy({ left: direction * track.clientWidth * .8, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    }
+  },
+  template: templates.at(-2)
+})
+.component('product-photo', {
+  props: { src: String, eager: Boolean },
+  emits: ['unavailable'],
+  data() { return { failedSource: null }; },
+  computed: {
+    placeholder() { return !this.src || this.src === this.failedSource; }
+  },
+  watch: {
+    src() { this.failedSource = null; }
+  },
+  methods: {
+    showPlaceholder() {
+      if (this.placeholder) return;
+      this.failedSource = this.src;
+      this.$emit('unavailable');
+    }
+  },
+  template: `<img :key="src" :src="placeholder ? '/images/item-placeholder.png' : src"
+    class="product-photo" :class="{ 'photo-placeholder': placeholder }" alt="" decoding="async"
+    :loading="eager ? 'eager' : 'lazy'" @error="showPlaceholder">`
+})
+.component('item-card', {
+  props: ['item', 'category', 'preview', 'interested', 'count', 'pending', 'priority'],
+  emits: ['details', 'interest'],
+  methods: { formatPrice },
+  template: templates.at(-1)
+})
+.component('reservation-badge', {
+  props: { count: Number, interested: Boolean },
+  template: `<span v-if="interested || count > 0" class="reservation-badge">
+    {{ interested ? 'Réservé par vous' : 'Déjà réservé' }}<span v-if="count > 1"> · {{ count }}</span>
+  </span>`
+})
+.directive('modal', { mounted: dialog => dialog.showModal(), beforeUnmount: dialog => dialog.close() })
+.mount(app);

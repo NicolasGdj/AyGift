@@ -1,0 +1,19 @@
+<article class="item-card">
+  <button class="item-open" type="button" @click="$emit('details')">
+    <div class="item-cover">
+      <product-photo :src="item.image"></product-photo>
+      <span v-if="priority" class="rank" :aria-label="'Position ' + priority">{{ priority }}</span>
+    </div>
+    <div class="item-content">
+      <span v-if="category" class="item-category">{{ category }}</span>
+      <h3>{{ item.name }}</h3>
+      <reservation-badge v-if="!item.owned && !preview" :count="count" :interested="interested"></reservation-badge>
+      <span v-if="item.price !== null && item.price !== '' && item.price !== undefined" class="item-price">{{ formatPrice(item.price) }}</span>
+    </div>
+  </button>
+  <div v-if="!item.owned" class="item-card-bottom">
+    <button type="button" class="interest-button" :disabled="pending || preview" @click="$emit('interest')">
+      {{ interested ? 'Retirer ma réservation' : count > 0 ? 'Réserver aussi' : 'Réserver' }}
+    </button>
+  </div>
+</article>

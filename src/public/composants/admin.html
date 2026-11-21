@@ -1,0 +1,239 @@
+<main v-if="!showWelcome && isAdmin && !publicView" class="container admin-main">
+  <div class="page-heading">
+    <h1>{{ adminViews[adminView] }}</h1>
+    <div v-if="adminView === 'articles' || adminView === 'owned'" class="actions">
+      <button v-if="adminView === 'articles'" type="button" class="btn back-btn" @click="openBulkImport">Importer en JSON</button>
+      <button type="button" class="btn btn-primary" @click="addNewItem">Nouvel article</button>
+    </div>
+    <button v-else-if="adminView === 'categories'" type="button" class="btn btn-primary" @click="closeCategoryForm(); showCategoryForm = true">Nouvelle catégorie</button>
+  </div>
+
+  <form v-if="adminView === 'sizes'" id="profile-settings" class="preference-layout" @submit.prevent="saveSettings">
+    <section class="panel">
+      <h2>Tailles de vêtements</h2>
+      <p class="hint">Les invités verront ces tailles pour choisir leurs cadeaux.</p>
+      <div v-for="(size, index) in draft.sizes" :key="index" class="size-edit-row">
+        <div class="input-group">
+          <label :for="'size-label-' + index">Vêtement ou accessoire</label>
+          <input :id="'size-label-' + index" v-model.trim="size.label" maxlength="60" placeholder="Ex. Chaussures" required>
+        </div>
+        <div class="input-group">
+          <label :for="'size-value-' + index">Taille</label>
+          <input :id="'size-value-' + index" v-model.trim="size.value" maxlength="60" placeholder="Ex. 42 EU" required>
+        </div>
+        <button class="btn btn-danger btn-small" type="button" @click="draft.sizes.splice(index, 1)">Retirer</button>
+      </div>
+      <button class="btn back-btn" type="button" :disabled="draft.sizes.length >= preferenceLimit" @click="addSize">Ajouter une taille</button>
+    </section>
+    <section class="panel">
+      <h2>Couleurs préférées</h2>
+      <div v-for="(color, index) in draft.favoriteColors" :key="index" class="palette-edit-row">
+        <div class="input-group palette-picker">
+          <label :for="'favorite-color-' + index">Couleur</label>
+          <input :id="'favorite-color-' + index" type="color" v-model="color.hex">
+        </div>
+        <div class="input-group">
+          <label :for="'favorite-label-' + index">Nom (facultatif)</label>
+          <input :id="'favorite-label-' + index" v-model.trim="color.label" maxlength="60" placeholder="Ex. Bleu nuit">
+        </div>
+        <button class="btn btn-danger btn-small" type="button" :aria-label="'Retirer la couleur ' + (color.label || color.hex)" @click="draft.favoriteColors.splice(index, 1)">Retirer</button>
+      </div>
+      <button class="btn back-btn" type="button" :disabled="draft.favoriteColors.length >= preferenceLimit" @click="addFavoriteColor">Ajouter une couleur</button>
+    </section>
+  </form>
+
+  <form v-if="adminView === 'avoid'" id="profile-settings" class="preference-layout" @submit.prevent="saveSettings">
+    <section class="panel">
+      <label class="checkbox-label"><input type="checkbox" v-model="draft.avoidEnabled"> Afficher la page « Pas pour moi » aux invités</label>
+      <div class="input-group">
+        <label for="avoid-intro">Introduction (facultative)</label>
+        <textarea id="avoid-intro" v-model="draft.avoidIntro" maxlength="500" placeholder="Si vous cherchez une idée, voici les cadeaux que je préfère éviter."></textarea>
+      </div>
+    </section>
+    <section v-for="(group, index) in draft.avoidGroups" :key="index" class="panel">
+      <div class="input-group">
+        <label :for="'avoid-title-' + index">Nom de la catégorie</label>
+        <input :id="'avoid-title-' + index" v-model.trim="group.title" maxlength="80" placeholder="Ex. Parfums" required>
+      </div>
+      <div class="input-group">
+        <label :for="'avoid-description-' + index">Description (facultative)</label>
+        <textarea :id="'avoid-description-' + index" v-model="group.description" maxlength="500"></textarea>
+      </div>
+      <div class="input-group">
+        <label :for="'avoid-examples-' + index">Exemples (facultatifs, un par ligne)</label>
+        <textarea :id="'avoid-examples-' + index" v-model="group.examples" maxlength="800"></textarea>
+      </div>
+      <div class="actions">
+        <button class="btn back-btn btn-small" type="button" :disabled="index === 0" @click="moveAvoidGroup(index, -1)">Monter</button>
+        <button class="btn back-btn btn-small" type="button" :disabled="index === draft.avoidGroups.length - 1" @click="moveAvoidGroup(index, 1)">Descendre</button>
+        <button class="btn btn-danger btn-small" type="button" @click="draft.avoidGroups.splice(index, 1)">Retirer la catégorie</button>
+      </div>
+    </section>
+    <div class="actions"><button class="btn back-btn" type="button" :disabled="draft.avoidGroups.length >= preferenceLimit" @click="addAvoidGroup">Ajouter une catégorie</button></div>
+  </form>
+
+  <form v-if="adminView === 'welcome'" id="profile-settings" class="settings-grid" @submit.prevent="saveSettings">
+    <div class="panel">
+      <div class="input-group"><label for="welcome-owner">Votre nom</label><input id="welcome-owner" v-model.trim="draft.welcome.ownerName" :placeholder="defaultOwner" maxlength="80"></div>
+      <div class="input-group"><label for="welcome-site">Nom du site</label><input id="welcome-site" v-model.trim="draft.welcome.siteName" maxlength="60" required></div>
+      <div class="input-group"><label for="welcome-title">Titre d’accueil</label><input id="welcome-title" v-model.trim="draft.welcome.title" maxlength="120" :placeholder="'Les envies de ' + (draft.welcome.ownerName || defaultOwner) + '.'"></div>
+      <div class="input-group"><label for="welcome-description">Texte d’accueil</label><textarea id="welcome-description" v-model="draft.welcome.description" maxlength="500"></textarea></div>
+      <div class="input-group"><label for="welcome-guest-button">Bouton invité</label><input id="welcome-guest-button" v-model.trim="draft.welcome.guestButton" maxlength="60" required></div>
+      <div class="input-group"><label for="welcome-admin-button">Bouton administrateur</label><input id="welcome-admin-button" v-model.trim="draft.welcome.adminButton" maxlength="60" required></div>
+      <div class="input-group"><label for="welcome-login-title">Titre du formulaire administrateur</label><input id="welcome-login-title" v-model.trim="draft.welcome.loginTitle" maxlength="120" required></div>
+      <div class="input-group"><label for="welcome-login-description">Texte du formulaire administrateur</label><textarea id="welcome-login-description" v-model="draft.welcome.loginDescription" maxlength="500"></textarea></div>
+    </div>
+    <section class="panel">
+      <h2>Aperçu de la page de connexion</h2>
+      <div class="theme-preview">
+        <div class="brand">{{ draft.welcome.siteName }}</div>
+        <div class="theme-card">
+          <h3>{{ draft.welcome.title || 'Les envies de ' + (draft.welcome.ownerName || defaultOwner) + '.' }}</h3>
+          <p v-if="draft.welcome.description" class="welcome-description">{{ draft.welcome.description }}</p>
+          <div class="actions"><span class="btn btn-primary">{{ draft.welcome.guestButton }}</span><span class="btn back-btn">{{ draft.welcome.adminButton }}</span></div>
+        </div>
+      </div>
+    </section>
+  </form>
+
+  <template v-if="adminView === 'categories'">
+    <section class="panel">
+      <h2>Navigation des invités</h2>
+      <div class="input-group">
+        <label for="category-layout">Disposition des catégories</label>
+        <select id="category-layout" v-model="draft.categoryLayout">
+          <option value="bar">Barre horizontale</option>
+          <option value="sidebar">Colonne latérale</option>
+        </select>
+      </div>
+      <h3>Ordre des catégories</h3>
+      <p v-if="!draftCategories.length" class="hint">Aucune catégorie pour le moment.</p>
+      <ol v-else class="settings-list">
+        <li v-for="(cat, index) in draftCategories" :key="cat.id">
+          <div class="row-label"><strong>{{ cat.name }}</strong><span v-if="cat.description" class="hint">{{ cat.description }}</span></div>
+          <div class="actions">
+            <button type="button" class="btn back-btn btn-small" :disabled="index === 0" :aria-label="'Monter ' + cat.name" @click="moveCategory(index, -1)">Monter</button>
+            <button type="button" class="btn back-btn btn-small" :disabled="index === draftCategories.length - 1" :aria-label="'Descendre ' + cat.name" @click="moveCategory(index, 1)">Descendre</button>
+            <button type="button" class="btn back-btn btn-small" @click="addItemInCategory(cat)">Ajouter un article</button>
+            <button type="button" class="btn back-btn btn-small" @click="editCategory(cat)">Modifier</button>
+            <button type="button" class="btn btn-danger btn-small" @click="deleteCategory(cat)">Supprimer</button>
+          </div>
+        </li>
+      </ol>
+    </section>
+  </template>
+
+  <template v-if="adminView === 'appearance'">
+    <div class="settings-grid">
+      <section class="panel">
+        <h2>Palette du site</h2>
+        <div class="color-list">
+          <label v-for="(label, key) in { accent: 'Accent', background: 'Fond de page', surface: 'Surface des cartes', text: 'Texte', reservation: 'Badge de réservation' }" :key="key">
+            <span>{{ label }}</span>
+            <span class="color-control"><code>{{ draft.colors[key].toUpperCase() }}</code><input type="color" v-model="draft.colors[key]"></span>
+          </label>
+        </div>
+        <button type="button" class="btn back-btn" @click="resetColors">Rétablir les couleurs par défaut</button>
+        <div class="input-group layout-setting">
+          <label for="catalog-layout">Présentation des articles</label>
+          <select id="catalog-layout" v-model="draft.catalogLayout">
+            <option value="grid">Grille</option>
+            <option value="list">Liste</option>
+          </select>
+        </div>
+      </section>
+      <section class="panel theme-panel">
+        <h2>Aperçu des couleurs</h2>
+        <div class="theme-preview" :style="themeStyles(draft.colors)">
+          <div class="brand">{{ settings.welcome.siteName }}</div>
+          <div class="theme-card">
+            <strong>La liste de {{ owner }}</strong>
+            <reservation-badge :count="1"></reservation-badge>
+            <span class="btn btn-primary">Voir les idées</span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </template>
+
+  <template v-if="adminView === 'featured'">
+    <section class="panel">
+      <h2>Top des invités</h2>
+      <form id="featured-settings" @submit.prevent="saveSettings">
+        <label class="checkbox-label"><input type="checkbox" v-model="draft.featuredEnabled"> Afficher le Top en haut de la liste</label>
+        <div class="input-group limit-field">
+          <label for="featured-limit">Nombre maximum d’articles</label>
+          <input id="featured-limit" type="number" min="1" :max="featuredLimitMax" step="1" required v-model.number="draft.featuredLimit">
+        </div>
+        <div class="input-group limit-field">
+          <label for="recent-limit">Nombre d’envies récemment renouvelées</label>
+          <input id="recent-limit" type="number" min="1" :max="featuredLimitMax" step="1" required v-model.number="draft.recentLimit">
+        </div>
+        <label class="roulette-toggle"><input type="checkbox" v-model="draft.rouletteEnabled"> Activer la Roulette pour les invités</label>
+      </form>
+      <h3>Ordre de mise en avant</h3>
+      <p class="hint">Ajoutez les articles depuis la liste ci-dessous. Les articles déjà achetés sont ignorés dans le Top.</p>
+      <p v-if="!draft.featuredIds.length" class="empty-inline">Aucun article sélectionné.</p>
+      <ol v-else class="settings-list featured-order">
+        <li v-for="(id, index) in draft.featuredIds" :key="id">
+          <span class="order-position">{{ index + 1 }}</span>
+          <div class="row-label">
+            <strong>{{ featuredChoices[id]?.name || 'Article #' + id }}</strong>
+            <span v-if="featuredChoices[id]?.owned" class="hint">Déjà acheté</span>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn back-btn btn-small" :disabled="index === 0" :aria-label="'Monter l’article en position ' + (index + 1)" @click="moveFeatured(index, -1)">Monter</button>
+            <button type="button" class="btn back-btn btn-small" :disabled="index === draft.featuredIds.length - 1" :aria-label="'Descendre l’article en position ' + (index + 1)" @click="moveFeatured(index, 1)">Descendre</button>
+            <button type="button" class="btn btn-danger btn-small" @click="toggleFeatured({ id })">Retirer</button>
+          </div>
+        </li>
+      </ol>
+    </section>
+  </template>
+
+  <div v-if="!['articles', 'owned'].includes(adminView)" class="save-bar">
+    <span aria-live="polite">{{ settingsDirty ? 'Modifications en attente' : 'Réglages enregistrés' }}</span>
+    <button v-if="['featured', 'sizes', 'avoid', 'welcome'].includes(adminView)" type="submit" :form="adminView === 'featured' ? 'featured-settings' : 'profile-settings'" class="btn btn-primary"
+      :disabled="!adminSettingsReady || !settingsDirty || savingSettings">{{ savingSettings ? 'Enregistrement…' : 'Enregistrer les réglages' }}</button>
+    <button v-else type="button" class="btn btn-primary" :disabled="!adminSettingsReady || !settingsDirty || savingSettings"
+      @click="saveSettings">{{ savingSettings ? 'Enregistrement…' : 'Enregistrer les réglages' }}</button>
+  </div>
+
+  <section v-if="['articles', 'owned', 'featured'].includes(adminView)" class="admin-items">
+    <h2 v-if="adminView === 'featured'">Articles à mettre en avant</h2>
+    <div class="search-tools">
+      <div class="search-field">
+        <label class="sr-only" for="admin-search">Rechercher un article</label>
+        <input id="admin-search" type="search" v-model="searchQuery" placeholder="Rechercher un article…">
+      </div>
+      <label class="sr-only" for="admin-category">Filtrer par catégorie</label>
+      <select id="admin-category" v-model="selectedCategory">
+        <option :value="null">Toutes les catégories</option>
+        <option v-for="cat in categoryList" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+      </select>
+    </div>
+    <div v-if="pages.articles.items.length" class="admin-item-list">
+      <div v-for="item in pages.articles.items" :key="item.id" class="admin-item-row">
+        <button type="button" class="admin-item-name" @click="showItemDetail(item)">
+          <span class="admin-thumb"><product-photo :src="item.image"></product-photo></span>
+          <span><strong>{{ item.name }}</strong><span class="hint">{{ categoryNames[item.category_id] }}</span></span>
+        </button>
+        <span v-if="item.owned" class="status-label">Déjà acheté</span>
+        <button v-if="adminView === 'featured'" type="button" class="btn back-btn btn-small"
+          :aria-pressed="draft.featuredIds.includes(item.id)" @click="toggleFeatured(item)">
+          {{ draft.featuredIds.includes(item.id) ? 'Retirer du Top' : 'Ajouter au Top' }}
+        </button>
+        <button v-else type="button" class="btn back-btn btn-small" @click="editItem(item)">Modifier</button>
+      </div>
+    </div>
+    <p v-else-if="!pages.articles.error" class="empty-state">{{ pages.articles.pending ? 'Chargement…' : 'Aucun article trouvé.' }}</p>
+    <p v-if="pages.articles.error" class="error-text" role="alert">Impossible de charger les articles.</p>
+    <button v-if="pages.articles.error || pages.articles.hasMore" type="button" class="btn back-btn more-button"
+      :disabled="pages.articles.pending" @click="loadPage('articles')">
+      {{ pages.articles.pending ? 'Chargement…' : pages.articles.error ? 'Réessayer' : 'Afficher plus' }}
+    </button>
+  </section>
+  <section v-if="adminView === 'articles'" class="admin-maintenance">
+    <button type="button" class="btn btn-danger btn-small" @click="resetAllBookings()">Effacer toutes les réservations</button>
+  </section>
+</main>

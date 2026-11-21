@@ -7,6 +7,9 @@
     "start": "node server.js",
     "dev": "nodemon server.js"
   },
+  "nodemonConfig": {
+    "env": { "NODE_ENV": "development" }
+  },
   "dependencies": {
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",

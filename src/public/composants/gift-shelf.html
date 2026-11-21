@@ -1,0 +1,13 @@
+<div class="gift-shelf">
+  <div v-if="canScrollBack || canScrollForward" class="shelf-controls">
+    <button class="btn back-btn btn-small" type="button" :disabled="!canScrollBack" :aria-label="'Précédents · ' + label" @click="scroll(-1)">Précédents</button>
+    <button class="btn back-btn btn-small" type="button" :disabled="!canScrollForward" :aria-label="'Suivants · ' + label" @click="scroll(1)">Suivants</button>
+  </div>
+  <div ref="track" class="item-grid" :class="{ 'item-list': !carousel && layout === 'list', 'shelf-track': carousel }"
+    :tabindex="canScrollBack || canScrollForward ? 0 : null" :role="carousel ? 'group' : null" :aria-label="carousel ? label : null"
+    @scroll.passive="updateScrollControls" @keydown.left.self.prevent="scroll(-1)" @keydown.right.self.prevent="scroll(1)">
+    <item-card v-for="(item, index) in items" :key="item.id" :item="item" :category="categories[item.category_id]" :preview="preview"
+      :interested="!preview && item.user_interested" :count="preview ? 0 : item.booking_count" :pending="!!pending[item.id]"
+      :priority="ranked ? index + 1 : null" @details="$emit('details', item)" @interest="$emit('interest', item)"></item-card>
+  </div>
+</div>

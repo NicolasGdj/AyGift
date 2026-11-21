@@ -1,22 +1,7 @@
 import express from 'express';
 import { Category, Item, ItemBook } from '../dao/index.js';
-import { fileURLToPath } from 'url';
-import path from 'path';
-import { promises as fs } from 'fs';
 import { authenticateToken } from '../middleware/auth.js';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const IMAGES_DIR = path.join(__dirname, '..', 'public', 'images', 'uploads');
-
-async function deleteLocalImage(imagePath) {
-  try {
-    if (!imagePath || typeof imagePath !== 'string') return;
-    if (!imagePath.startsWith('/images/uploads/')) return;
-    const filePath = path.join(IMAGES_DIR, path.basename(imagePath));
-    await fs.unlink(filePath).catch(() => {});
-  } catch (_) {}
-}
+import { removeUnusedImage } from './itemImages.js';
 
 const router = express.Router();
 
@@ -80,8 +65,8 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     if (itemIds.length) {
       // Remove bookings in a single query
       await ItemBook.destroy({ where: { item_id: itemIds } });
-      for (const item of items) { await deleteLocalImage(item.image); }
       await Item.destroy({ where: { category_id: category.id } });
+      await Promise.all(items.map(item => removeUnusedImage(item.image)));
     }
     await category.destroy();
     res.status(204).send();

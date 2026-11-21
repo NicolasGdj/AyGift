@@ -1,33 +1,42 @@
-<div v-if="showWelcome" class="welcome-screen">
-  <div class="welcome-content">
-    <div v-if="welcomeStep === 'choice'">
-      <h1 class="welcome-title">AyGift</h1>
-      <p>Bienvenue sur la page AyGift de {{ owner }}, ici vous pouvez trouver des idées cadeaux personnalisées.</p>
-      <div class="welcome-buttons">
-        <button type="button" class="welcome-btn primary" @click="selectGuest">Je cherche une idée</button>
-        <button type="button" class="welcome-btn secondary" @click="selectOwner">Je suis {{ owner }}</button>
+<main v-if="showWelcome" class="welcome-screen">
+  <section class="welcome-content">
+    <div class="brand">{{ settings.welcome.siteName }}</div>
+    <div v-if="welcomeStep === 'choice'" class="welcome-copy">
+      <h1>{{ settings.welcome.title || 'Les envies de ' + owner + '.' }}</h1>
+      <p v-if="settings.welcome.description" class="welcome-description">{{ settings.welcome.description }}</p>
+      <div class="welcome-actions">
+        <button type="button" class="btn btn-primary" @click="selectGuest">{{ settings.welcome.guestButton }}</button>
+        <button type="button" class="btn back-btn" @click="selectOwner">{{ settings.welcome.adminButton }}</button>
       </div>
     </div>
-    <div v-if="welcomeStep === 'owner'">
-      <h1 class="welcome-title">Connexion</h1>
-      <div class="welcome-field">
-        <input type="password" v-model="password" @keyup.enter="login" placeholder="Mot de passe" class="welcome-input">
+    <form v-else-if="welcomeStep === 'owner'" class="welcome-copy" action="/api/auth/login" method="post" @submit.prevent="login">
+      <h1>{{ settings.welcome.loginTitle }}</h1>
+      <p v-if="settings.welcome.loginDescription" class="welcome-description">{{ settings.welcome.loginDescription }}</p>
+      <div class="input-group">
+        <label for="one-time-code">Code à usage unique</label>
+        <input id="one-time-code" name="one-time-code" class="otp-input" :type="otpFieldType" autocomplete="one-time-code"
+          inputmode="numeric" spellcheck="false" required autofocus
+          aria-describedby="otp-help" :aria-invalid="!!loginError">
+        <p id="otp-help" class="hint">Saisissez le code à six chiffres de votre gestionnaire de mots de passe ou de votre application d’authentification.</p>
       </div>
-      <div class="welcome-actions row">
-        <button type="button" class="welcome-btn primary" @click="login">Se connecter</button>
-        <button type="button" class="welcome-btn ghost" @click="welcomeStep='choice'">Retour</button>
+      <p v-if="loginError" class="error-text" role="alert">{{ loginError }}</p>
+      <div class="welcome-actions">
+        <button type="submit" class="btn btn-primary" :disabled="loginPending">{{ loginPending ? 'Connexion…' : 'Se connecter' }}</button>
+        <button type="button" class="btn back-btn" @click="welcomeStep = 'choice'">Retour</button>
       </div>
-    </div>
-    <div v-if="welcomeStep === 'guest'">
-      <h1 class="welcome-title">Entrez votre nom</h1>
-      <p>Rassurez-vous, {{ owner }} ne verra pas vos choix.</p>
-      <div class="welcome-field">
-        <input type="text" v-model="guestName" @keyup.enter="setGuestName" placeholder="Entrez votre nom" class="welcome-input">
+    </form>
+    <form v-else class="welcome-copy" @submit.prevent="setGuestName">
+      <h1>Comment vous appelez-vous ?</h1>
+      <p>Les autres invités verront le nom que vous indiquez et la date de vos réservations. Saisissez le même nom pour les retrouver sur un autre appareil.</p>
+      <div class="input-group">
+        <label for="guest-name">Votre prénom ou nom</label>
+        <input id="guest-name" type="text" autocomplete="name" v-model="guestName" maxlength="255" required>
       </div>
-      <div class="welcome-actions row">
-        <button type="button" class="welcome-btn primary" @click="setGuestName">Commencer</button>
-        <button type="button" class="welcome-btn ghost" @click="welcomeStep='choice'">Retour</button>
+      <p v-if="guestError" class="error-text" role="alert">{{ guestError }}</p>
+      <div class="welcome-actions">
+        <button type="submit" class="btn btn-primary" :disabled="guestPending">Voir les idées</button>
+        <button type="button" class="btn back-btn" :disabled="guestPending" @click="welcomeStep = 'choice'">Retour</button>
       </div>
-    </div>
-  </div>
-</div>
+    </form>
+  </section>
+</main>

@@ -1,12 +1,15 @@
 import express from 'express';
-import { Op } from 'sequelize';
-import sequelize from '../dao/db.js';
+import { col, fn, Op, where as sqlWhere } from 'sequelize';
 import { Item, Category, ItemBook } from '../dao/index.js';
+import { readSiteSettings } from '../dao/siteSettings.js';
+import { maxFeaturedIds } from '../public/js/settings.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import { promises as fs } from 'fs';
 import { randomUUID } from 'crypto';
 import { authenticateToken } from '../middleware/auth.js';
+import { ownsBooking, readGuest } from '../middleware/guest.js';
+import { removeUnusedImage, storeCroppedImage } from './itemImages.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,64 +46,103 @@ async function downloadImage(imageUrl) {
   }
 }
 
-async function deleteLocalImage(imagePath) {
-  try {
-    if (!imagePath || typeof imagePath !== 'string') return;
-    if (!imagePath.startsWith('/images/uploads/')) return; // only local stored
-    const filePath = path.join(IMAGES_DIR, path.basename(imagePath));
-    await fs.unlink(filePath).catch(() => {});
-  } catch (_) {}
+const router = express.Router();
+
+const bookings = { model: ItemBook, as: 'bookings', attributes: ['user'] };
+
+function withBookingMetadata(item, guest) {
+  const data = item.toJSON();
+  data.booking_count = data.bookings.length;
+  data.user_interested = data.bookings.some(booking => ownsBooking(guest, booking.user));
+  delete data.bookings;
+  return data;
 }
 
-const router = express.Router();
+async function catalogFilters({ category_id, search, priceMin, priceMax }) {
+  const where = {};
+  if (category_id) where.category_id = category_id;
+  if (priceMin || priceMax) {
+    where.price = {};
+    if (priceMin) where.price[Op.gte] = parseFloat(priceMin);
+    if (priceMax) where.price[Op.lte] = parseFloat(priceMax);
+  }
+  if (typeof search === 'string' && search.trim()) {
+    const term = search.trim();
+    const contains = column => sqlWhere(fn('instr', fn('lower', col(column)), fn('lower', term)), { [Op.gt]: 0 });
+    const categories = await Category.findAll({ attributes: ['id'], where: contains('name') });
+    where[Op.or] = [
+      contains('Item.name'),
+      contains('Item.description'),
+      { category_id: categories.map(category => category.id) }
+    ];
+  }
+  return where;
+}
+
+router.get('/roulette', async (req, res, next) => {
+  try {
+    const { rouletteEnabled } = await readSiteSettings();
+    res.set('Cache-Control', 'no-store');
+    if (!rouletteEnabled) return res.sendStatus(404);
+    const where = await catalogFilters(req.query);
+    where.owned = false;
+    const items = await Item.findAll({ attributes: ['id', 'name', 'image'], include: [bookings], where });
+    const guest = readGuest(req);
+    res.json(items.map(item => withBookingMetadata(item, guest)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/featured', async (req, res, next) => {
+  try {
+    const { featuredEnabled, featuredLimit, featuredIds } = await readSiteSettings();
+    if (!featuredEnabled || !featuredIds.length) return res.json([]);
+    const items = await Item.findAll({
+      where: { id: featuredIds, owned: false },
+      include: [bookings]
+    });
+    const byId = new Map(items.map(item => [item.id, item]));
+    const featured = featuredIds.map(id => byId.get(id)).filter(Boolean).slice(0, featuredLimit);
+    const guest = readGuest(req);
+    res.set('Cache-Control', 'no-store').json(featured.map(item => withBookingMetadata(item, guest)));
+  } catch (error) {
+    next(error);
+  }
+});
 
 // GET all items with pagination and filters
 router.get('/', async (req, res) => {
   try {
-    const { offset = 0, limit = 20, category_id, search, priceMin, priceMax, owned, user } = req.query;
+    const { offset = 0, limit = 20, owned, ids, recent } = req.query;
+    const where = await catalogFilters(req.query);
     
-    let where = {};
-    
-    if (category_id) {
-      where.category_id = category_id;
+    if (ids !== undefined) {
+      if (typeof ids !== 'string' || !/^\d+(,\d+)*$/.test(ids)) return res.sendStatus(400);
+      const itemIds = ids.split(',').map(Number);
+      if (itemIds.length > maxFeaturedIds || !itemIds.every(Number.isSafeInteger)) return res.sendStatus(400);
+      where.id = itemIds;
     }
-    
-    if (priceMin || priceMax) {
-      where.price = {};
-      if (priceMin) where.price[Op.gte] = parseFloat(priceMin);
-      if (priceMax) where.price[Op.lte] = parseFloat(priceMax);
-    }
-    
-    if (search) {
-      where[Op.or] = [
-        { name: { [Op.like]: `%${search}%` } },
-        { description: { [Op.like]: `%${search}%` } }
-      ];
-    }
-    
+
     if (owned !== undefined) {
       where.owned = owned === 'true';
+    }
+    if (recent === 'true') {
+      where.owned = false;
+      where.last_interest_date = { [Op.not]: null };
     }
     
     const items = await Item.findAll({
       where,
-      include: [
-        { model: ItemBook, as: 'bookings', attributes: ['user', 'date'] }
-      ],
+      include: [bookings],
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['last_interest_date', 'DESC']]
+      order: [['last_interest_date', 'DESC'], ['id', 'DESC']]
     });
     
     // Add computed fields
-    const itemsWithMeta = items.map(item => {
-      const itemData = item.toJSON();
-      itemData.booking_count = itemData.bookings ? itemData.bookings.length : 0;
-      itemData.user_interested = user && itemData.bookings ? itemData.bookings.some(b => b.user === user) : false;
-      return itemData;
-    });
-    
-    res.json(itemsWithMeta);
+    const guest = readGuest(req);
+    res.set('Cache-Control', 'no-store').json(items.map(item => withBookingMetadata(item, guest)));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -109,44 +151,42 @@ router.get('/', async (req, res) => {
 // GET single item
 router.get('/:id', async (req, res) => {
   try {
-    const { user } = req.query;
+    const guest = readGuest(req);
     const item = await Item.findByPk(req.params.id, {
-      include: [
-        { model: ItemBook, as: 'bookings', attributes: ['user', 'date'] }
-      ]
+      include: [bookings]
     });
     if (!item) {
       return res.status(404).json({ error: 'Item not found' });
     }
     
-    // Add computed fields
-    const itemData = item.toJSON();
-    itemData.booking_count = itemData.bookings ? itemData.bookings.length : 0;
-    itemData.user_interested = user && itemData.bookings ? itemData.bookings.some(b => b.user === user) : false;
-    
-    res.json(itemData);
+    res.set('Cache-Control', 'no-store').json(withBookingMetadata(item, guest));
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
 // POST new item
-router.post('/', authenticateToken, async (req, res) => {
+router.post('/', authenticateToken, express.json({ limit: '4mb' }), async (req, res) => {
+  let uploaded;
   try {
-    const body = { ...req.body };
-    if (body.image) {
+    const { imageData, ...body } = req.body;
+    if (imageData !== undefined) {
+      uploaded = await storeCroppedImage(imageData);
+      body.image = uploaded;
+    } else if (body.image) {
       const localPath = await downloadImage(body.image);
-      if (localPath) body.image = localPath; // replace with local path
+      if (localPath) body.image = uploaded = localPath;
     }
     const item = await Item.create(body);
     res.status(201).json(item);
   } catch (error) {
+    await removeUnusedImage(uploaded);
     res.status(400).json({ error: error.message });
   }
 });
 
 // BULK create items (accepts single object or array)
-router.post('/bulk', authenticateToken, async (req, res) => {
+router.post('/bulk', authenticateToken, express.json(), async (req, res) => {
   try {
     const payload = req.body;
     const itemsInput = Array.isArray(payload) ? payload : [payload];
@@ -185,11 +225,11 @@ router.post('/bulk', authenticateToken, async (req, res) => {
           category_id: categoryId,
           name: raw.name,
           description: raw.description || null,
-          price: raw.price || null,
+          price: raw.price ?? null,
           link: raw.link || null,
           image: imagePath || null,
           owned: !!raw.owned,
-          last_interest_date: raw.last_interest_date || new Date().toISOString()
+          last_interest_date: raw.last_interest_date || null
         };
 
         const item = await Item.create(toCreate);
@@ -206,15 +246,24 @@ router.post('/bulk', authenticateToken, async (req, res) => {
 });
 
 // PUT update item
-router.put('/:id', authenticateToken, async (req, res) => {
+router.put('/:id', authenticateToken, express.json({ limit: '4mb' }), async (req, res) => {
+  let uploaded;
   try {
     const item = await Item.findByPk(req.params.id);
     if (!item) {
       return res.status(404).json({ error: 'Item not found' });
     }
-    await item.update(req.body);
+    const previousImage = item.image;
+    const { imageData, ...body } = req.body;
+    if (imageData !== undefined) {
+      uploaded = await storeCroppedImage(imageData);
+      body.image = uploaded;
+    }
+    await item.update(body);
+    if (previousImage !== item.image) await removeUnusedImage(previousImage);
     res.json(item);
   } catch (error) {
+    await removeUnusedImage(uploaded);
     res.status(400).json({ error: error.message });
   }
 });
@@ -228,8 +277,8 @@ router.delete('/:id', authenticateToken, async (req, res) => {
     }
     // Delete bookings referencing this item first to satisfy FK constraints
     await ItemBook.destroy({ where: { item_id: item.id } });
-    await deleteLocalImage(item.image);
     await item.destroy();
+    await removeUnusedImage(item.image);
     res.status(204).send();
   } catch (error) {
     res.status(500).json({ error: error.message });

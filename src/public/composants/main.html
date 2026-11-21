@@ -1,109 +1,161 @@
-<div v-else class="container">
-  <div class="header">
-    <h1>AyGift</h1>
-    <p v-if="isAdmin">
-      Mode Admin
-      <button type="button" class="logout-btn" @click="logout">Déconnexion</button>
-    </p>
-    <p v-else>Bonjour {{ userName }} !</p>
-  </div>
-  <div class="search-container">
-    <span class="search-icon">🔍</span>
-    <input type="text" class="search-input" v-model="searchQuery" placeholder="Rechercher un article ou une catégorie..." />
-  </div>
-  <button type="button" class="filter-toggle-btn" @click="togglePriceFilter">
-    <span>Filtrer par prix</span>
-    <span>{{ showPriceFilter ? '▲' : '▼' }}</span>
-  </button>
-  <div class="price-filter" :class="{ collapsed: !showPriceFilter }">
-    <h4>Filtrer par prix</h4>
-    <div class="price-inputs">
-      <input type="number" v-model.number="priceMin" placeholder="Min (€)" min="0" />
-      <span>-</span>
-      <input type="number" v-model.number="priceMax" placeholder="Max (€)" min="0" />
+<div v-if="!showWelcome" class="site">
+  <header class="site-header">
+    <div class="site-header-inner">
+      <span class="brand">{{ settings.welcome.siteName }}</span>
+      <span v-if="!isAdmin" class="header-meta">Bonjour, {{ userName }}</span>
+      <button v-else type="button" class="btn back-btn" @click="logout">Déconnexion</button>
     </div>
-  </div>
-  <div v-if="isAdmin" class="admin-toolbar">
-    <button type="button" class="btn btn-success btn-small" @click="showCategoryForm = true">+ Nouvelle Catégorie</button>
-    <button type="button" class="btn btn-primary btn-small" @click="addNewItem">+ Nouvel Article</button>
-    <button type="button" class="btn btn-info btn-small" @click="openBulkImport">+ Bulk</button>
-    <button type="button" class="btn btn-danger btn-small" @click="resetAllBookings">Réinitialiser Intérêts</button>
-  </div>
-  <div class="category-menu">
-    <div class="category-item">
-      <button type="button" class="category-btn" :class="{ active: selectedCategory === null }" @click="selectCategory(null)">Toutes</button>
+  </header>
+  <nav v-if="isAdmin" class="admin-nav" aria-label="Administration">
+    <div class="container admin-nav-inner">
+      <button v-for="(label, view) in adminViews" :key="view" type="button" class="nav-button"
+        :aria-current="adminView === view ? 'page' : null" @click="changeAdminView(view)">{{ label }}</button>
     </div>
-    <div class="category-item" v-for="cat in categories" :key="cat.id">
-      <button type="button" class="category-btn" :class="{ active: selectedCategory === cat.id }">
-        <span @click="handleCategoryClick(cat)">{{ cat.name }}</span>
-        <span v-if="isAdmin" class="category-actions-trigger" @click.stop="toggleCategoryMenu(cat, $event)">⚙️</span>
-      </button>
-      <div v-if="isAdmin && openCategoryMenuId === cat.id" class="category-actions-menu">
-        <button type="button" @click="addItemInCategory(cat)">+ Article</button>
-        <button type="button" @click="deleteCategory(cat)" class="danger">Supprimer</button>
+  </nav>
+
+  <main v-if="publicView" class="container catalog">
+    <nav class="guest-nav" aria-label="Liste de cadeaux">
+      <template v-for="entry in guestViews" :key="entry.view">
+        <a v-if="!isAdmin" :href="entry.hash" class="category-btn" :aria-current="guestView === entry.view ? 'page' : null">{{ entry.label }}</a>
+        <button v-else type="button" class="category-btn" :aria-current="guestView === entry.view ? 'page' : null" @click="changeGuestView(entry.view)">{{ entry.label }}</button>
+      </template>
+    </nav>
+
+    <div class="catalog-heading">
+      <h1 v-if="guestView === 'home'">La liste de {{ owner }}</h1>
+      <h1 v-else-if="guestView === 'owned'">Déjà possédés</h1>
+      <h1 v-else>{{ guestViews.find(entry => entry.view === guestView)?.label }}</h1>
+    </div>
+
+    <div v-if="guestView === 'sizes'" class="preference-layout">
+      <section v-if="settings.sizes.length || !settings.favoriteColors.length" class="panel sizes-panel" aria-label="Tailles de vêtements">
+        <p v-if="!settings.sizes.length" class="hint">Aucune taille renseignée pour le moment.</p>
+        <dl v-else class="size-values">
+          <div v-for="(size, index) in settings.sizes" :key="index"><dt>{{ size.label }}</dt><dd>{{ size.value }}</dd></div>
+        </dl>
+      </section>
+      <section v-if="settings.favoriteColors.length" class="panel sizes-panel">
+        <h2>Couleurs préférées</h2>
+        <ul class="favorite-palette">
+          <li v-for="(color, index) in settings.favoriteColors" :key="index">
+            <span class="palette-swatch" :style="{ backgroundColor: color.hex }" aria-hidden="true"></span>
+            <span>{{ color.label || color.hex.toUpperCase() }}</span>
+          </li>
+        </ul>
+      </section>
+    </div>
+
+    <div v-else-if="guestView === 'avoid'" class="preference-layout">
+      <p v-if="settings.avoidIntro" class="preference-copy">{{ settings.avoidIntro }}</p>
+      <p v-if="!settings.avoidGroups.length && !settings.avoidIntro" class="empty-state">Aucun cadeau à éviter n’a encore été indiqué.</p>
+      <section v-for="(group, index) in settings.avoidGroups" :key="index" class="panel">
+        <h2>{{ group.title }}</h2>
+        <p v-if="group.description" class="preference-copy">{{ group.description }}</p>
+        <ul v-if="group.examples" class="avoid-examples">
+          <li v-for="(example, exampleIndex) in avoidExamples(group.examples)" :key="exampleIndex">{{ example }}</li>
+        </ul>
+      </section>
+    </div>
+
+    <template v-else>
+      <div class="guest-search-panel">
+        <div class="search-tools">
+          <div class="search-field">
+            <label class="sr-only" for="guest-search">Rechercher dans la liste</label>
+            <input id="guest-search" type="search" v-model="searchQuery" placeholder="Rechercher un cadeau…">
+          </div>
+          <button class="btn back-btn filter-button" type="button" :aria-expanded="filtersOpen" aria-controls="guest-filters" @click="filtersOpen = !filtersOpen">
+            <span class="filter-mark" aria-hidden="true"></span> Filtres
+          </button>
+        </div>
+        <div id="guest-filters" v-show="filtersOpen" class="guest-filters">
+          <div class="input-group">
+            <label for="guest-category">Catégorie</label>
+            <select id="guest-category" v-model="selectedCategory">
+              <option :value="null">Toutes les catégories</option>
+              <option v-for="cat in categoryList" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+            </select>
+          </div>
+          <div class="input-group"><label for="price-min">Prix minimum (€)</label><input id="price-min" type="number" v-model.number="priceMin" min="0" step="0.01"></div>
+          <div class="input-group"><label for="price-max">Prix maximum (€)</label><input id="price-max" type="number" v-model.number="priceMax" min="0" step="0.01"></div>
+        </div>
+        <button v-if="activeFilters" class="btn back-btn btn-small" type="button" @click="clearFilters">Effacer la recherche et les filtres</button>
       </div>
-    </div>
-  </div>
-  <div v-if="loading" class="loading">Chargement...</div>
-  <div v-else>
-    <div v-if="wishlistItems.length > 0" class="carousel-section">
-      <h2 class="carousel-title">Ce que j'aimerais</h2>
-      <div class="carousel-container">
-        <div class="carousel">
-          <div v-for="(item, index) in wishlistItems" :key="item.id" class="item-card" :class="{ active: item === currentWishlistItem }" @click="showItemDetail(item)">
-            <div class="item-card-top">
-              <img v-if="item.image" :src="item.image" :alt="item.name" class="item-image" />
-              <div class="item-content">
-                <div class="item-header">
-                  <h3 :title="item.name">{{ item.name }}</h3>
-                  <div class="item-price-badge" v-if="item.price">{{ item.price }}€</div>
-                </div>
-                <div class="item-date" v-if="item.last_interest_date">{{ owner }} a renouvelé son intérêt le <br>{{ formatDate(item.last_interest_date) }}</div>
-              </div>
-            </div>
-            <div class="item-card-bottom" v-if="!isAdmin">
-              <button type="button" tabindex="-1" class="interest-button" :class="{ 'user-interested': isUserInterested(item), 'others-interested': !isUserInterested(item) && getInterestCount(item) > 0, 'no-interest': getInterestCount(item) === 0 }" @click.prevent.stop="toggleInterest(item)" @touchstart.stop @touchend.stop :title="getInterestCount(item) > 0 ? 'Intéressés (' + getInterestCount(item) + ') : ' + getInterestedList(item) : ''">
-                {{ isUserInterested(item) ? '✓ Intéressé' : getInterestCount(item) > 0 ? 'Intéressé' : 'Ça m\'intéresse' }}
-                <span class="interest-count" v-if="getInterestCount(item) > 0">({{ getInterestCount(item) }})</span>
-              </button>
+
+      <section v-if="guestView === 'roulette'" class="panel roulette-panel" aria-label="Tirage au sort">
+        <p class="sr-only" role="status">{{ rouletteResult ? 'Résultat du tirage. ' + rouletteResult.name : '' }}</p>
+        <div v-if="rouletteTiles.length" class="roulette-window" aria-hidden="true">
+          <div ref="rouletteTrack" class="roulette-track" :style="{ '--roulette-index': roulettePosition }">
+            <div v-for="(tile, index) in rouletteTiles" :key="index + '-' + tile.id" class="roulette-tile"
+              :class="{ 'roulette-tile-winner': rouletteResult && index === roulettePosition }">
+              <product-photo :src="tile.image" eager></product-photo>
+              <span>{{ tile.name }}</span>
             </div>
           </div>
-          <div class="item-card load-more-card" @click="loadMoreWishlist()">
-            <div class="item-content">
-              <h3>Charger plus</h3>
-              <div v-if="loadingMore" class="loading-spinner"></div>
-            </div>
+          <div class="roulette-marker"></div>
+        </div>
+        <div class="roulette-status">
+          <template v-if="rouletteResult">
+            <h2 class="roulette-result">{{ rouletteResult.name }}</h2>
+            <reservation-badge v-if="!isAdmin" :count="rouletteResult.booking_count" :interested="rouletteResult.user_interested"></reservation-badge>
+          </template>
+          <p v-else-if="rouletteLoading">Chargement des articles…</p>
+          <p v-else-if="rouletteError" class="error-text">Impossible de charger les idées pour le tirage.</p>
+          <p v-else-if="!rouletteItems.length">{{ activeFilters ? 'Aucun article ne correspond aux filtres.' : 'Aucune idée cadeau disponible pour le moment.' }}</p>
+          <p v-else>{{ rouletteItems.length }} {{ rouletteItems.length === 1 ? 'idée en jeu' : 'idées en jeu' }}</p>
+        </div>
+        <div class="actions">
+          <button v-if="rouletteError" type="button" class="btn back-btn" @click="loadRoulette">Réessayer</button>
+          <button v-else type="button" class="btn btn-primary" @click="spinRoulette" :disabled="!rouletteItems.length || rouletteSpinning || rouletteOpening">
+            {{ rouletteSpinning ? 'Tirage en cours…' : rouletteResult ? 'Relancer la roulette' : 'Lancer la roulette' }}
+          </button>
+          <button v-if="rouletteResult" type="button" class="btn back-btn" @click="openRouletteResult" :disabled="rouletteOpening">Voir l’article</button>
+        </div>
+      </section>
+
+      <template v-else-if="homeShelves">
+        <section v-if="featuredItems.length" class="featured-section" aria-labelledby="featured-title">
+          <h2 id="featured-title">Top {{ featuredItems.length }} des envies</h2>
+          <gift-shelf :items="featuredItems" :categories="categoryNames" :preview="isAdmin" :pending="pendingInterests"
+            :layout="settings.catalogLayout" ranked @details="showItemDetail" @interest="toggleInterest"></gift-shelf>
+        </section>
+        <section v-if="recentItems.length" class="catalog-section recent-section" aria-labelledby="recent-title">
+          <h2 id="recent-title">Envies récemment renouvelées</h2>
+          <gift-shelf :items="recentItems" :categories="categoryNames" :preview="isAdmin" :pending="pendingInterests"
+            carousel label="Envies récemment renouvelées" @details="showItemDetail" @interest="toggleInterest"></gift-shelf>
+        </section>
+        <div class="category-shelves" :class="{ 'shelf-sidebar': settings.categoryLayout === 'sidebar' }">
+          <nav v-if="guestShelfKeys.some(key => pages[key]?.items.length)" class="category-nav shelf-nav" aria-label="Aller à une catégorie">
+            <button v-for="cat in categoryList.filter(category => pages['category-' + category.id]?.items.length)" :key="cat.id" class="category-btn" type="button" @click="jumpToCategory(cat.id)">{{ cat.name }}</button>
+          </nav>
+          <div class="shelf-content">
+            <template v-for="cat in categoryList" :key="cat.id">
+              <section v-if="pages['category-' + cat.id]?.items.length || pages['category-' + cat.id]?.error" :id="'shelf-' + cat.id" class="catalog-section" :aria-label="cat.name">
+                <h2>{{ cat.name }}</h2>
+                <gift-shelf :items="pages['category-' + cat.id].items" :categories="categoryNames" :preview="isAdmin" :pending="pendingInterests"
+                  carousel :label="cat.name" @details="showItemDetail" @interest="toggleInterest"></gift-shelf>
+                <p v-if="pages['category-' + cat.id].error" class="error-text" role="alert">Impossible de charger les articles.</p>
+                <button v-if="pages['category-' + cat.id].hasMore || pages['category-' + cat.id].error" class="btn back-btn more-button" type="button" :disabled="pages['category-' + cat.id].pending" @click="loadPage('category-' + cat.id)">
+                  {{ pages['category-' + cat.id].pending ? 'Chargement…' : pages['category-' + cat.id].error ? 'Réessayer' : 'Afficher plus' }}
+                </button>
+              </section>
+            </template>
+            <p v-if="!featuredItems.length && !recentItems.length && !guestShelfKeys.some(key => pages[key]?.items.length || pages[key]?.error)" class="empty-state">
+              {{ guestShelfKeys.some(key => pages[key]?.pending) ? 'Chargement des idées…' : 'La liste est vide pour le moment.' }}
+            </p>
           </div>
         </div>
-        <button type="button" v-if="wishlistItems.length > 5" class="nav-arrow left" @click="scrollWishlist(-1)" aria-label="Précédent">‹</button>
-        <button type="button" v-if="wishlistItems.length > 5" class="nav-arrow right" @click="scrollWishlist(1)" aria-label="Suivant">›</button>
+      </template>
+
+      <div v-else class="catalog-results" aria-live="polite">
+        <gift-shelf v-if="pages[guestResultKey].items.length" :items="pages[guestResultKey].items" :categories="categoryNames" :preview="isAdmin"
+          :pending="pendingInterests" :layout="settings.catalogLayout" @details="showItemDetail" @interest="toggleInterest"></gift-shelf>
+        <p v-else-if="!pages[guestResultKey].error" class="empty-state">{{ pages[guestResultKey].pending ? 'Chargement…' : activeFilters ? 'Aucun article trouvé.' : 'Aucun article possédé pour le moment.' }}</p>
+        <p v-if="pages[guestResultKey].error" class="error-text" role="alert">Impossible de charger les articles.</p>
+        <button v-if="pages[guestResultKey].hasMore || pages[guestResultKey].error" class="btn back-btn more-button" type="button" :disabled="pages[guestResultKey].pending" @click="loadPage(guestResultKey)">
+          {{ pages[guestResultKey].pending ? 'Chargement…' : pages[guestResultKey].error ? 'Réessayer' : 'Afficher plus' }}
+        </button>
       </div>
-    </div>
-    <div v-if="ownedItems.length > 0" class="carousel-section">
-      <h2 class="carousel-title">Ce que j'ai déjà</h2>
-      <div class="carousel-container">
-        <div class="carousel">
-          <div v-for="(item, index) in ownedItems" :key="item.id" class="item-card owned" :class="{ active: item === currentOwnedItem }" @click="showItemDetail(item)">
-            <div class="item-card-top">
-              <img v-if="item.image" :src="item.image" :alt="item.name" class="item-image" />
-              <div class="item-content">
-                <div class="item-header">
-                  <h3 :title="item.name">{{ item.name }}</h3>
-                  <div class="item-price-badge" v-if="item.price">{{ item.price }}€</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="item-card load-more-card" @click="loadMoreOwned()">
-            <div class="item-content">
-              <h3>Charger plus</h3>
-              <div v-if="loadingMore" class="loading-spinner"></div>
-            </div>
-          </div>
-        </div>
-        <button type="button" v-if="ownedItems.length > 5" class="nav-arrow left" @click="scrollOwned(-1)" aria-label="Précédent">‹</button>
-        <button type="button" v-if="ownedItems.length > 5" class="nav-arrow right" @click="scrollOwned(1)" aria-label="Suivant">›</button>
-      </div>
-    </div>
-  </div>
+    </template>
+  </main>
 </div>
