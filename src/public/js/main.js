@@ -137,27 +137,65 @@ Vue.createApp({
   }
 })
 .component('gift-shelf', {
-  props: ['items', 'categories', 'preview', 'pending', 'layout', 'ranked', 'carousel', 'label'],
-  emits: ['details', 'interest'],
-  data() { return { canScrollBack: false, canScrollForward: false }; },
-  watch: { 'items.length'() { this.$nextTick(this.updateScrollControls); } },
-  mounted() {
-    if (this.carousel) {
-      this.resizeObserver = new ResizeObserver(this.updateScrollControls);
-      this.resizeObserver.observe(this.$refs.track);
-    }
+  props: {
+    items: Array, categories: Object, preview: Boolean, pending: Object, layout: String, ranked: Boolean,
+    carousel: Boolean, podium: Boolean, label: String, page: Object, rankOffset: { type: Number, default: 0 }
   },
+  emits: ['details', 'interest', 'more'],
+  data() {
+    return { canScrollBack: false, canScrollForward: false, drag: null, dragging: false, suppressClick: false };
+  },
+  mounted() {
+    this.resizeObserver = new ResizeObserver(this.updateScrollControls);
+    this.resizeObserver.observe(this.$refs.track);
+  },
+  updated() { this.updateScrollControls(); },
   beforeUnmount() { this.resizeObserver?.disconnect(); },
   methods: {
     updateScrollControls() {
       const track = this.$refs.track;
-      if (!this.carousel || !track) return;
-      this.canScrollBack = track.scrollLeft > 1;
-      this.canScrollForward = track.scrollLeft + track.clientWidth < track.scrollWidth - 1;
+      this.canScrollBack = this.carousel && track.scrollLeft > 1;
+      this.canScrollForward = this.carousel && track.scrollLeft + track.clientWidth < track.scrollWidth - 1;
     },
     scroll(direction) {
       const track = this.$refs.track;
       track.scrollBy({ left: direction * track.clientWidth * .8, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    },
+    startDrag(event) {
+      this.suppressClick = false;
+      const track = event.currentTarget;
+      if (!this.carousel || event.pointerType !== 'mouse' || event.button !== 0 ||
+          track.scrollWidth <= track.clientWidth || event.target.closest('.interest-button, .shelf-page')) return;
+      this.drag = { pointer: event.pointerId, x: event.clientX, scroll: track.scrollLeft };
+    },
+    moveDrag(event) {
+      if (this.drag?.pointer !== event.pointerId) return;
+      const movement = event.clientX - this.drag.x;
+      if (!this.dragging && Math.abs(movement) < 6) return;
+      const track = event.currentTarget;
+      if (!this.dragging) {
+        this.dragging = true;
+        track.setPointerCapture(event.pointerId);
+      }
+      track.scrollLeft = this.drag.scroll - movement;
+    },
+    endDrag(event) {
+      if (this.drag?.pointer !== event.pointerId) return;
+      this.suppressClick = this.dragging;
+      this.drag = null;
+      this.dragging = false;
+    },
+    leaveTrack() {
+      if (!this.dragging) this.drag = null;
+    },
+    preventNativeDrag(event) {
+      if (this.carousel) event.preventDefault();
+    },
+    preventDragClick(event) {
+      if (!this.suppressClick || event.detail === 0) return;
+      this.suppressClick = false;
+      event.preventDefault();
+      event.stopPropagation();
     }
   },
   template: templates.at(-2)

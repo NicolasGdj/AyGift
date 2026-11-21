@@ -106,6 +106,14 @@
           <option value="sidebar">Colonne latérale</option>
         </select>
       </div>
+      <div class="input-group">
+        <label for="category-items-layout">Présentation des articles par catégorie</label>
+        <select id="category-items-layout" v-model="draft.categoryItemsLayout">
+          <option value="carousel">Carrousel horizontal</option>
+          <option value="grid">Grille</option>
+          <option value="list">Liste</option>
+        </select>
+      </div>
       <h3>Ordre des catégories</h3>
       <p v-if="!draftCategories.length" class="hint">Aucune catégorie pour le moment.</p>
       <ol v-else class="settings-list">
@@ -161,6 +169,13 @@
       <h2>Top des invités</h2>
       <form id="featured-settings" @submit.prevent="saveSettings">
         <label class="checkbox-label"><input type="checkbox" v-model="draft.featuredEnabled"> Afficher le Top en haut de la liste</label>
+        <div class="input-group limit-field">
+          <label for="featured-layout">Présentation du Top</label>
+          <select id="featured-layout" v-model="draft.featuredLayout">
+            <option value="podium">Podium</option>
+            <option value="classic">Classique</option>
+          </select>
+        </div>
         <div class="input-group limit-field">
           <label for="featured-limit">Nombre maximum d’articles</label>
           <input id="featured-limit" type="number" min="1" :max="featuredLimitMax" step="1" required v-model.number="draft.featuredLimit">

@@ -131,6 +131,7 @@ button[aria-pressed="true"].back-btn { color: var(--on-accent); background-color
   border-radius: 1.35rem;
 }
 .featured-section h2 { margin-bottom: 1.25rem; font-size: clamp(1.65rem, 4vw, 2.6rem); }
+.featured-section .gift-shelf + .gift-shelf { margin-top: 1rem; }
 .search-tools { display: flex; gap: .65rem; align-items: flex-start; }
 .search-tools > select { width: auto; max-width: 45%; }
 .search-field { flex: 1; min-width: 0; position: relative; }
@@ -166,19 +167,60 @@ button[aria-pressed="true"].back-btn { color: var(--on-accent); background-color
 .shelf-content { min-width: 0; }
 .shelf-nav { margin-bottom: 1rem; }
 .shelf-controls { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .4rem; margin-bottom: .55rem; }
-.shelf-track {
+.item-grid.shelf-track {
   grid-auto-flow: column;
   grid-auto-columns: clamp(12rem, 32vw, 16rem);
   grid-template-columns: none;
+  grid-template-rows: auto;
   overflow-x: auto;
   overscroll-behavior-inline: contain;
   scroll-snap-type: x mandatory;
+  scroll-padding-inline: .2rem;
   padding: .2rem .2rem .65rem;
   scrollbar-color: var(--line) transparent;
 }
-.shelf-track .item-card { scroll-snap-align: start; }
+.shelf-track > * { scroll-snap-align: start; }
+.shelf-track.shelf-dragging { scroll-snap-type: none; cursor: grabbing; user-select: none; }
+.shelf-track .item-open { cursor: grab; }
+.shelf-track.shelf-dragging .item-open { cursor: grabbing; }
+.shelf-page {
+  min-height: 6rem;
+  padding: .8rem;
+  border: 1px dashed var(--accent);
+  border-radius: 1rem;
+  background: var(--tint);
+  color: var(--text);
+  font-weight: 700;
+}
+.shelf-page:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 17%, var(--surface)); }
 .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(13rem, 100%), 1fr)); gap: 1rem; }
+.item-grid.podium-grid {
+  grid-template-columns: repeat(var(--podium-columns), minmax(0, 1fr));
+  align-items: stretch;
+  gap: clamp(.4rem, 2vw, 1rem);
+  width: min(100%, 45rem);
+  margin-inline: auto;
+}
+.podium-grid[data-podium-size="1"] { max-width: 16rem; }
+.podium-grid[data-podium-size="2"] { max-width: 32rem; }
+.podium-grid[data-podium-size="3"] > .item-card { grid-row: 1; }
+.podium-grid[data-podium-size="3"] > .item-card:nth-child(1) { grid-column: 2; }
+.podium-grid[data-podium-size="3"] > .item-card:nth-child(2) { grid-column: 1; }
+.podium-grid[data-podium-size="3"] > .item-card:nth-child(3) { grid-column: 3; }
 .item-card { display: flex; flex-direction: column; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 1rem; overflow: hidden; }
+.podium-grid > .item-card:nth-child(2) { margin-top: 1.2rem; }
+.podium-grid > .item-card:nth-child(3) { margin-top: 1.9rem; }
+.podium-grid > .item-card::after {
+  content: "";
+  flex: none;
+  height: 1.45rem;
+  background: color-mix(in srgb, var(--accent) 25%, var(--surface));
+  border-top: 1px solid var(--line);
+}
+.podium-grid > .item-card:first-child::after { height: 2.65rem; background: var(--accent); }
+.podium-grid > .item-card:nth-child(3)::after { height: .75rem; }
+.podium-grid .item-cover { aspect-ratio: 1; }
+.podium-grid .item-content h3 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .item-card:hover { box-shadow: 0 4px 12px #20162614; }
 .item-open { display: flex; flex-direction: column; flex: 1; width: 100%; padding: 0; border: 0; background: transparent; text-align: left; }
 .item-open:focus-visible { outline-offset: -3px; }
@@ -398,6 +440,11 @@ input[type="color"] { padding: .15rem; border: 1px solid var(--line); border-rad
   .admin-item-row .status-label { display: none; }
   .item-list .item-card { flex-direction: column; align-items: stretch; }
   .item-list .item-card-bottom { padding: 0 .8rem .8rem; }
+  .podium-grid .item-content { padding: .5rem; }
+  .podium-grid .item-card-bottom { padding: 0 .45rem .55rem; }
+  .podium-grid .item-content h3 { font-size: .95rem; }
+  .podium-grid .interest-button, .podium-grid .reservation-badge { padding: .3rem; font-size: .78rem; }
+  .podium-grid .item-cover { --photo-inset: .35rem; }
   .reservation-details li { grid-template-columns: minmax(0, 1fr); }
   .guest-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .guest-filters > :first-child { grid-column: 1 / -1; }

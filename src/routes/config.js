@@ -36,11 +36,13 @@ router.put('/', authenticateToken, express.json({ limit: '256kb' }), async (req,
   const colors = { reservation: current.colors.reservation, ...submittedColors };
   const {
     recentLimit = current.recentLimit, welcome = current.welcome, sizes = current.sizes,
+    categoryItemsLayout = current.categoryItemsLayout, featuredLayout = current.featuredLayout,
     favoriteColors = current.favoriteColors, avoidEnabled = current.avoidEnabled, avoidIntro = current.avoidIntro,
     avoidGroups = current.avoidGroups, rouletteEnabled = current.rouletteEnabled
   } = req.body || {};
   if (!colorKeys.every(key => validColor(colors[key])) ||
       !validIds(categoryOrder) || !['bar', 'sidebar'].includes(categoryLayout) ||
+      !['carousel', 'grid', 'list'].includes(categoryItemsLayout) || !['podium', 'classic'].includes(featuredLayout) ||
       !['grid', 'list'].includes(catalogLayout) || typeof featuredEnabled !== 'boolean' ||
       !Number.isInteger(featuredLimit) || featuredLimit < 1 || featuredLimit > maxFeaturedLimit ||
       !validIds(featuredIds) || featuredIds.length > maxFeaturedIds ||
@@ -63,8 +65,10 @@ router.put('/', authenticateToken, express.json({ limit: '256kb' }), async (req,
     colors: Object.fromEntries(colorKeys.map(key => [key, colors[key]])),
     categoryOrder: [...new Set(categoryOrder)],
     categoryLayout,
+    categoryItemsLayout,
     catalogLayout,
     featuredEnabled,
+    featuredLayout,
     featuredLimit,
     featuredIds: [...new Set(featuredIds)],
     recentLimit,

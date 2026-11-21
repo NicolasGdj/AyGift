@@ -3,11 +3,22 @@
     <button class="btn back-btn btn-small" type="button" :disabled="!canScrollBack" :aria-label="'Précédents · ' + label" @click="scroll(-1)">Précédents</button>
     <button class="btn back-btn btn-small" type="button" :disabled="!canScrollForward" :aria-label="'Suivants · ' + label" @click="scroll(1)">Suivants</button>
   </div>
-  <div ref="track" class="item-grid" :class="{ 'item-list': !carousel && layout === 'list', 'shelf-track': carousel }"
+  <div ref="track" class="item-grid" :class="{ 'item-list': !carousel && layout === 'list', 'shelf-track': carousel, 'shelf-dragging': dragging, 'podium-grid': podium }"
+    :data-podium-size="podium ? items.length : null" :style="podium ? { '--podium-columns': items.length } : null"
     :tabindex="canScrollBack || canScrollForward ? 0 : null" :role="carousel ? 'group' : null" :aria-label="carousel ? label : null"
-    @scroll.passive="updateScrollControls" @keydown.left.self.prevent="scroll(-1)" @keydown.right.self.prevent="scroll(1)">
+    @scroll.passive="updateScrollControls" @keydown.left.self.prevent="scroll(-1)" @keydown.right.self.prevent="scroll(1)"
+    @pointerdown="startDrag" @pointermove="moveDrag" @pointerup="endDrag" @pointercancel="endDrag" @lostpointercapture="endDrag"
+    @pointerleave="leaveTrack" @dragstart="preventNativeDrag" @click.capture="preventDragClick">
     <item-card v-for="(item, index) in items" :key="item.id" :item="item" :category="categories[item.category_id]" :preview="preview"
       :interested="!preview && item.user_interested" :count="preview ? 0 : item.booking_count" :pending="!!pending[item.id]"
-      :priority="ranked ? index + 1 : null" @details="$emit('details', item)" @interest="$emit('interest', item)"></item-card>
+      :priority="ranked ? index + rankOffset + 1 : null" @details="$emit('details', item)" @interest="$emit('interest', item)"></item-card>
+    <button v-if="carousel && page?.hasMore" class="shelf-page" type="button" :disabled="page.pending" @click="$emit('more')">
+      {{ page.pending ? 'Chargement…' : page.error ? 'Réessayer' : 'Afficher plus' }}
+    </button>
   </div>
+  <p v-if="page?.error" class="error-text" role="alert">Impossible de charger les articles.</p>
+  <button v-if="page && (!carousel || !page.hasMore) && (page.hasMore || page.error)" class="btn back-btn more-button"
+    type="button" :disabled="page.pending" @click="$emit('more')">
+    {{ page.pending ? 'Chargement…' : page.error ? 'Réessayer' : 'Afficher plus' }}
+  </button>
 </div>

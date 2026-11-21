@@ -116,7 +116,11 @@
       <template v-else-if="homeShelves">
         <section v-if="featuredItems.length" class="featured-section" aria-labelledby="featured-title">
           <h2 id="featured-title">Top {{ featuredItems.length }} des envies</h2>
-          <gift-shelf :items="featuredItems" :categories="categoryNames" :preview="isAdmin" :pending="pendingInterests"
+          <gift-shelf v-if="settings.featuredLayout === 'podium'" :items="featuredItems.slice(0, 3)" :categories="categoryNames"
+            :preview="isAdmin" :pending="pendingInterests" podium ranked @details="showItemDetail" @interest="toggleInterest"></gift-shelf>
+          <gift-shelf v-if="settings.featuredLayout === 'classic' || featuredItems.length > 3"
+            :items="settings.featuredLayout === 'podium' ? featuredItems.slice(3) : featuredItems"
+            :rank-offset="settings.featuredLayout === 'podium' ? 3 : 0" :categories="categoryNames" :preview="isAdmin" :pending="pendingInterests"
             :layout="settings.catalogLayout" ranked @details="showItemDetail" @interest="toggleInterest"></gift-shelf>
         </section>
         <section v-if="recentItems.length" class="catalog-section recent-section" aria-labelledby="recent-title">
@@ -133,11 +137,9 @@
               <section v-if="pages['category-' + cat.id]?.items.length || pages['category-' + cat.id]?.error" :id="'shelf-' + cat.id" class="catalog-section" :aria-label="cat.name">
                 <h2>{{ cat.name }}</h2>
                 <gift-shelf :items="pages['category-' + cat.id].items" :categories="categoryNames" :preview="isAdmin" :pending="pendingInterests"
-                  carousel :label="cat.name" @details="showItemDetail" @interest="toggleInterest"></gift-shelf>
-                <p v-if="pages['category-' + cat.id].error" class="error-text" role="alert">Impossible de charger les articles.</p>
-                <button v-if="pages['category-' + cat.id].hasMore || pages['category-' + cat.id].error" class="btn back-btn more-button" type="button" :disabled="pages['category-' + cat.id].pending" @click="loadPage('category-' + cat.id)">
-                  {{ pages['category-' + cat.id].pending ? 'Chargement…' : pages['category-' + cat.id].error ? 'Réessayer' : 'Afficher plus' }}
-                </button>
+                  :layout="settings.categoryItemsLayout" :carousel="settings.categoryItemsLayout === 'carousel'"
+                  :page="pages['category-' + cat.id]" :label="cat.name" @more="loadPage('category-' + cat.id)"
+                  @details="showItemDetail" @interest="toggleInterest"></gift-shelf>
               </section>
             </template>
             <p v-if="!featuredItems.length && !recentItems.length && !guestShelfKeys.some(key => pages[key]?.items.length || pages[key]?.error)" class="empty-state">
