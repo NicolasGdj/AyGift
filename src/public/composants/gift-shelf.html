@@ -11,7 +11,7 @@
     @pointerleave="leaveTrack" @dragstart="preventNativeDrag" @click.capture="preventDragClick">
     <item-card v-for="(item, index) in items" :key="item.id" :item="item" :category="categories[item.category_id]" :preview="preview"
       :interested="!preview && item.user_interested" :count="preview ? 0 : item.booking_count" :pending="!!pending[item.id]"
-      :priority="ranked ? index + rankOffset + 1 : null" @details="$emit('details', item)" @interest="$emit('interest', item)"></item-card>
+      :priority="ranked ? index + rankOffset + 1 : null" :podium="podium" @details="$emit('details', item)" @interest="$emit('interest', item)"></item-card>
     <button v-if="carousel && page?.hasMore" class="shelf-page" type="button" :disabled="page.pending" @click="$emit('more')">
       {{ page.pending ? 'Chargement…' : page.error ? 'Réessayer' : 'Afficher plus' }}
     </button>

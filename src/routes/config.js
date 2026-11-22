@@ -1,7 +1,7 @@
 import express from 'express';
 import { readSiteSettings, SiteSettings } from '../dao/siteSettings.js';
 import { authenticateToken } from '../middleware/auth.js';
-import { defaultSettings, maxFeaturedIds, maxFeaturedLimit, maxPreferenceRows, publicSiteSettings } from '../public/js/settings.js';
+import { defaultSettings, maxFeaturedIds, maxFeaturedLimit, maxFeaturedTitleLength, maxPreferenceRows, publicSiteSettings } from '../public/js/settings.js';
 
 const router = express.Router();
 const validIds = (ids) => Array.isArray(ids) && ids.every(id => Number.isSafeInteger(id) && id > 0);
@@ -37,6 +37,7 @@ router.put('/', authenticateToken, express.json({ limit: '256kb' }), async (req,
   const {
     recentLimit = current.recentLimit, welcome = current.welcome, sizes = current.sizes,
     categoryItemsLayout = current.categoryItemsLayout, featuredLayout = current.featuredLayout,
+    featuredTitle = current.featuredTitle,
     favoriteColors = current.favoriteColors, avoidEnabled = current.avoidEnabled, avoidIntro = current.avoidIntro,
     avoidGroups = current.avoidGroups, rouletteEnabled = current.rouletteEnabled
   } = req.body || {};
@@ -44,6 +45,7 @@ router.put('/', authenticateToken, express.json({ limit: '256kb' }), async (req,
       !validIds(categoryOrder) || !['bar', 'sidebar'].includes(categoryLayout) ||
       !['carousel', 'grid', 'list'].includes(categoryItemsLayout) || !['podium', 'classic'].includes(featuredLayout) ||
       !['grid', 'list'].includes(catalogLayout) || typeof featuredEnabled !== 'boolean' ||
+      !validText(featuredTitle, maxFeaturedTitleLength) ||
       !Number.isInteger(featuredLimit) || featuredLimit < 1 || featuredLimit > maxFeaturedLimit ||
       !validIds(featuredIds) || featuredIds.length > maxFeaturedIds ||
       !Number.isInteger(recentLimit) || recentLimit < 1 || recentLimit > maxFeaturedLimit ||
@@ -68,6 +70,7 @@ router.put('/', authenticateToken, express.json({ limit: '256kb' }), async (req,
     categoryItemsLayout,
     catalogLayout,
     featuredEnabled,
+    featuredTitle: featuredTitle.trim() || defaultSettings.featuredTitle,
     featuredLayout,
     featuredLimit,
     featuredIds: [...new Set(featuredIds)],

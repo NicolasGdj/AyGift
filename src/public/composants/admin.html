@@ -170,6 +170,12 @@
       <form id="featured-settings" @submit.prevent="saveSettings">
         <label class="checkbox-label"><input type="checkbox" v-model="draft.featuredEnabled"> Afficher le Top en haut de la liste</label>
         <div class="input-group limit-field">
+          <label for="featured-title-setting">Titre du Top</label>
+          <input id="featured-title-setting" type="text" :maxlength="maxFeaturedTitleLength" v-model="draft.featuredTitle"
+            aria-describedby="featured-title-hint">
+          <p id="featured-title-hint" class="hint">Utilisez # pour afficher le nombre d’articles. Laissez le champ vide pour rétablir le titre par défaut.</p>
+        </div>
+        <div class="input-group limit-field">
           <label for="featured-layout">Présentation du Top</label>
           <select id="featured-layout" v-model="draft.featuredLayout">
             <option value="podium">Podium</option>

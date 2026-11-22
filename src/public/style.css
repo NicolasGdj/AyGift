@@ -130,7 +130,7 @@ button[aria-pressed="true"].back-btn { color: var(--on-accent); background-color
   border: 1px solid var(--line);
   border-radius: 1.35rem;
 }
-.featured-section h2 { margin-bottom: 1.25rem; font-size: clamp(1.65rem, 4vw, 2.6rem); }
+.featured-section h2 { margin-bottom: 1.25rem; font-size: clamp(1.65rem, 4vw, 2.6rem); overflow-wrap: anywhere; }
 .featured-section .gift-shelf + .gift-shelf { margin-top: 1rem; }
 .search-tools { display: flex; gap: .65rem; align-items: flex-start; }
 .search-tools > select { width: auto; max-width: 45%; }
@@ -208,17 +208,31 @@ button[aria-pressed="true"].back-btn { color: var(--on-accent); background-color
 .podium-grid[data-podium-size="3"] > .item-card:nth-child(2) { grid-column: 1; }
 .podium-grid[data-podium-size="3"] > .item-card:nth-child(3) { grid-column: 3; }
 .item-card { display: flex; flex-direction: column; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 1rem; overflow: hidden; }
-.podium-grid > .item-card:nth-child(2) { margin-top: 1.2rem; }
-.podium-grid > .item-card:nth-child(3) { margin-top: 1.9rem; }
-.podium-grid > .item-card::after {
-  content: "";
+.podium-grid > .item-card:nth-child(2) { margin-top: .85rem; }
+.podium-grid > .item-card:nth-child(3) { margin-top: 1.7rem; }
+.podium-rank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: none;
-  height: 1.45rem;
-  background: color-mix(in srgb, var(--accent) 25%, var(--surface));
+  height: 4.2rem;
+  background: var(--accent);
+  color: var(--on-accent);
   border-top: 1px solid var(--line);
+  font-size: clamp(1.3rem, 3vw, 1.9rem);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
-.podium-grid > .item-card:first-child::after { height: 2.65rem; background: var(--accent); }
-.podium-grid > .item-card:nth-child(3)::after { height: .75rem; }
+.podium-grid > .item-card:nth-child(2) .podium-rank {
+  height: 3.35rem;
+  background: color-mix(in srgb, var(--accent) 24%, var(--surface));
+  color: var(--text);
+}
+.podium-grid > .item-card:nth-child(3) .podium-rank {
+  height: 2.5rem;
+  background: color-mix(in srgb, var(--accent) 13%, var(--surface));
+  color: var(--text);
+}
 .podium-grid .item-cover { aspect-ratio: 1; }
 .podium-grid .item-content h3 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .item-card:hover { box-shadow: 0 4px 12px #20162614; }

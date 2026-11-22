@@ -4,7 +4,7 @@ import { formatPrice, itemMethods } from './methods/items.js';
 import { uiMethods } from './methods/ui.js';
 import { bulkMethods } from './methods/bulk.js';
 import { settingsMethods, orderedCategories } from './methods/settings.js';
-import { defaultSettings, maxFeaturedLimit, maxPreferenceRows } from './settings.js';
+import { defaultSettings, maxFeaturedLimit, maxFeaturedTitleLength, maxPreferenceRows } from './settings.js';
 import { imageMethods } from './methods/images.js';
 import { rouletteMethods } from './methods/roulette.js';
 
@@ -42,6 +42,7 @@ Vue.createApp({
       savingSettings: false,
       adminSettingsReady: false,
       featuredLimitMax: maxFeaturedLimit,
+      maxFeaturedTitleLength,
       preferenceLimit: maxPreferenceRows,
       featuredItems: [],
       recentItems: [],
@@ -115,6 +116,7 @@ Vue.createApp({
     activeFilters() {
       return !!this.searchQuery.trim() || this.selectedCategory !== null || this.priceMin !== '' || this.priceMax !== '';
     },
+    featuredTitle() { return this.settings.featuredTitle.replaceAll('#', this.featuredItems.length); },
     filterKey() { return JSON.stringify([this.searchQuery.trim(), this.selectedCategory, this.priceMin, this.priceMax]); },
     homeShelves() { return this.guestView === 'home' && !this.activeFilters; },
     guestShelfKeys() { return this.categoryList.map(category => `category-${category.id}`); },
@@ -222,7 +224,7 @@ Vue.createApp({
     :loading="eager ? 'eager' : 'lazy'" @error="showPlaceholder">`
 })
 .component('item-card', {
-  props: ['item', 'category', 'preview', 'interested', 'count', 'pending', 'priority'],
+  props: ['item', 'category', 'preview', 'interested', 'count', 'pending', 'priority', 'podium'],
   emits: ['details', 'interest'],
   methods: { formatPrice },
   template: templates.at(-1)

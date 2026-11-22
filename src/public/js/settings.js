@@ -5,6 +5,7 @@ export const defaultSettings = {
   categoryItemsLayout: 'carousel',
   catalogLayout: 'grid',
   featuredEnabled: false,
+  featuredTitle: 'Top # des envies',
   featuredLayout: 'podium',
   featuredLimit: 3,
   featuredIds: [],
@@ -28,6 +29,7 @@ export const defaultSettings = {
 };
 
 export const maxFeaturedLimit = 30;
+export const maxFeaturedTitleLength = 120;
 export const maxFeaturedIds = 200;
 export const maxPreferenceRows = 30;
 

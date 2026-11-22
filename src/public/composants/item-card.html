@@ -2,7 +2,7 @@
   <button class="item-open" type="button" @click="$emit('details')">
     <div class="item-cover">
       <product-photo :src="item.image"></product-photo>
-      <span v-if="priority" class="rank" :aria-label="'Position ' + priority">{{ priority }}</span>
+      <span v-if="priority && !podium" class="rank" :aria-label="'Position ' + priority">{{ priority }}</span>
     </div>
     <div class="item-content">
       <span v-if="category" class="item-category">{{ category }}</span>
@@ -16,4 +16,5 @@
       {{ interested ? 'Retirer ma réservation' : count > 0 ? 'Réserver aussi' : 'Réserver' }}
     </button>
   </div>
+  <div v-if="priority && podium" class="podium-rank"><span class="sr-only">Position </span>{{ priority }}</div>
 </article>

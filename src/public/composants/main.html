@@ -115,7 +115,7 @@
 
       <template v-else-if="homeShelves">
         <section v-if="featuredItems.length" class="featured-section" aria-labelledby="featured-title">
-          <h2 id="featured-title">Top {{ featuredItems.length }} des envies</h2>
+          <h2 id="featured-title">{{ featuredTitle }}</h2>
           <gift-shelf v-if="settings.featuredLayout === 'podium'" :items="featuredItems.slice(0, 3)" :categories="categoryNames"
             :preview="isAdmin" :pending="pendingInterests" podium ranked @details="showItemDetail" @interest="toggleInterest"></gift-shelf>
           <gift-shelf v-if="settings.featuredLayout === 'classic' || featuredItems.length > 3"
